@@ -23,8 +23,4 @@ jobs:
         run: uvx --from build pyproject-build --installer uv
       
       - name: Publish
-        uses: pypa/gh-action-pypi-publish@v1.4.2
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          packages_dir: ./dist/
+        uses: pypa/gh-action-pypi-publish@release/v1
