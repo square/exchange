@@ -1,9 +1,14 @@
 name: PYPI Release
 
-on: [push, pull_request]
+on: 
+ push:
+  branches:
+    - main
+  tags:
+    - 'v*'
 
 jobs:
-  setup_uv:
+  pypi_release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,5 +22,9 @@ jobs:
       - name: Build with UV
         run: uvx --from build pyproject-build --installer uv
       
-      # - name: Upload to PyPi
-        # run: uvx twine upload dist/*
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@v1.4.2
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages_dir: ./dist/
