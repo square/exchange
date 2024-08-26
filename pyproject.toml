@@ -32,6 +32,7 @@ openai = "exchange.providers.openai:OpenAiProvider"
 databricks = "exchange.providers.databricks:DatabricksProvider"
 anthropic = "exchange.providers.anthropic:AnthropicProvider"
 bedrock = "exchange.providers.bedrock:BedrockProvider"
+ollama = "exchange.providers.ollama:OllamaProvider"
 
 [project.entry-points."exchange.moderator"]
 passive = "exchange.moderators.passive:PassiveModerator"
