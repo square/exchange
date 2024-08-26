@@ -29,6 +29,7 @@ dev-dependencies = [
 
 [project.entry-points."exchange.provider"]
 openai = "exchange.providers.openai:OpenAiProvider"
+azure = "exchange.providers.azure:AzureProvider"
 databricks = "exchange.providers.databricks:DatabricksProvider"
 anthropic = "exchange.providers.anthropic:AnthropicProvider"
 bedrock = "exchange.providers.bedrock:BedrockProvider"
