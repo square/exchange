@@ -19,25 +19,25 @@ OLLAMA_HOST = "http://localhost:11434/"
 
 
 #
-# NOTE: this is experimental, best used with 70B model or larger if you can
-# 
-
-'''
-ollama:
-  provider: ollama
-  processor: llama3.1
-  accelerator: llama3.1
-  moderator: passive
-  toolkits:
-  - name: developer
-    requires: {}
-
-'''
-
+# NOTE: this is experimental, best used with 70B model or larger if you can. 
+# Example profile config to try:
 class OllamaProvider(Provider):
     """Provides chat completions for models hosted by Ollama"""
 
+    """
+
+        ollama:
+          provider: ollama
+          processor: llama3.1
+          accelerator: llama3.1
+          moderator: passive
+          toolkits:
+          - name: developer
+            requires: {}
+    """    
+
     def __init__(self, client: httpx.Client) -> None:
+        print('PLEASE NOTE: this is an experimental provider, use with care')
         super().__init__()
         self.client = client
 
