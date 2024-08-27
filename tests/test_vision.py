@@ -1,8 +1,8 @@
 import pytest
-from exchange.content import ToolResult, ToolUse
-from exchange.exchange import Exchange
-from exchange.message import Message
-from exchange.providers import get_provider
+from ai_exchange.content import ToolResult, ToolUse
+from ai_exchange.exchange import Exchange
+from ai_exchange.message import Message
+from ai_exchange.providers import get_provider
 
 
 cases = [

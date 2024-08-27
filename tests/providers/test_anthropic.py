@@ -3,10 +3,10 @@ from unittest.mock import patch
 
 import httpx
 import pytest
-from exchange import Message, Text
-from exchange.content import ToolResult, ToolUse
-from exchange.providers.anthropic import AnthropicProvider
-from exchange.tool import Tool
+from ai_exchange import Message, Text
+from ai_exchange.content import ToolResult, ToolUse
+from ai_exchange.providers.anthropic import AnthropicProvider
+from ai_exchange.tool import Tool
 
 
 def example_fn(param: str) -> None:

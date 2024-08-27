@@ -1,9 +1,9 @@
 import pytest
-from exchange import utils
+from ai_exchange import utils
 from unittest.mock import patch
-from exchange.message import Message
-from exchange.content import Text, ToolResult
-from exchange.providers.utils import messages_to_openai_spec, encode_image
+from ai_exchange.message import Message
+from ai_exchange.content import Text, ToolResult
+from ai_exchange.providers.utils import messages_to_openai_spec, encode_image
 
 
 def test_encode_image():

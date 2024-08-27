@@ -1,7 +1,7 @@
 from typing import Literal, Optional, Type
 
-from exchange.moderators import PassiveModerator
-from exchange.moderators.base import Moderator
+from ai_exchange.moderators import PassiveModerator
+from ai_exchange.moderators.base import Moderator
 
 MAX_TOKENS = 112000
 

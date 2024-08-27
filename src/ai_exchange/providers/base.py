@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from attrs import define, field
 from typing import List, Tuple, Type
 
-from exchange.message import Message
-from exchange.tool import Tool
+from ai_exchange.message import Message
+from ai_exchange.tool import Tool
 
 
 @define

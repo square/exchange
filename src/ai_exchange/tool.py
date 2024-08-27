@@ -3,7 +3,7 @@ from typing import Any, Callable, Type
 
 from attrs import define
 
-from exchange.utils import json_schema, parse_docstring
+from ai_exchange.utils import json_schema, parse_docstring
 
 
 @define

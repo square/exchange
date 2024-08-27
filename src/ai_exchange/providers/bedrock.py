@@ -9,11 +9,11 @@ from urllib.parse import quote, urlparse
 
 import httpx
 
-from exchange.content import Text, ToolResult, ToolUse
-from exchange.message import Message
-from exchange.providers import Provider, Usage
-from exchange.providers.utils import raise_for_status
-from exchange.tool import Tool
+from ai_exchange.content import Text, ToolResult, ToolUse
+from ai_exchange.message import Message
+from ai_exchange.providers import Provider, Usage
+from ai_exchange.providers.utils import raise_for_status
+from ai_exchange.tool import Tool
 
 SERVICE = "bedrock-runtime"
 UTC = timezone.utc

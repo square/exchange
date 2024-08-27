@@ -1,12 +1,12 @@
 import pytest
-from exchange import Exchange
-from exchange.checkpoint import Checkpoint
-from exchange.message import Message
-from exchange.providers import Provider, Usage
-from exchange.moderators.truncate import ContextTruncate, pop_checkpoint
+from ai_exchange import Exchange
+from ai_exchange.checkpoint import Checkpoint
+from ai_exchange.message import Message
+from ai_exchange.providers import Provider, Usage
+from ai_exchange.moderators.truncate import ContextTruncate, pop_checkpoint
 from typing import List
-from exchange.content import Text
-from exchange.tool import Tool
+from ai_exchange.content import Text
+from ai_exchange.tool import Tool
 
 
 class MockProvider(Provider):

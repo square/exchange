@@ -6,12 +6,12 @@ from typing import Any, Dict, List, Mapping, Tuple
 from attrs import define, evolve, field
 from tiktoken import get_encoding
 
-from exchange.checkpoint import Checkpoint
-from exchange.content import ToolResult, ToolUse
-from exchange.message import Message
-from exchange.moderators import ContextTruncate, Moderator
-from exchange.providers import Provider, Usage
-from exchange.tool import Tool
+from ai_exchange.checkpoint import Checkpoint
+from ai_exchange.content import ToolResult, ToolUse
+from ai_exchange.message import Message
+from ai_exchange.moderators import ContextTruncate, Moderator
+from ai_exchange.providers import Provider, Usage
+from ai_exchange.tool import Tool
 
 
 def validate_tool_output(output: str) -> None:

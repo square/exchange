@@ -3,15 +3,15 @@ from typing import Any, Dict, List, Tuple, Type
 
 import httpx
 
-from exchange.message import Message
-from exchange.providers.base import Provider, Usage
-from exchange.providers.utils import (
+from ai_exchange.message import Message
+from ai_exchange.providers.base import Provider, Usage
+from ai_exchange.providers.utils import (
     messages_to_openai_spec,
     openai_response_to_message,
     raise_for_status,
     tools_to_openai_spec,
 )
-from exchange.tool import Tool
+from ai_exchange.tool import Tool
 
 
 class DatabricksProvider(Provider):

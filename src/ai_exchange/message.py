@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Literal, Type
 from attrs import define, field
 from jinja2 import Environment, FileSystemLoader
 
-from exchange.content import CONTENT_TYPES, Content, Text, ToolResult, ToolUse
-from exchange.utils import create_object_id
+from ai_exchange.content import CONTENT_TYPES, Content, Text, ToolResult, ToolUse
+from ai_exchange.utils import create_object_id
 
 Role = Literal["user", "assistant"]
 

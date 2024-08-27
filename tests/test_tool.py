@@ -1,5 +1,5 @@
 import attrs
-from exchange.tool import Tool
+from ai_exchange.tool import Tool
 
 
 def get_current_weather(location: str) -> None:

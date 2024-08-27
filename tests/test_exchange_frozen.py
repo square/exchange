@@ -1,11 +1,11 @@
 import pytest
 from attr.exceptions import FrozenInstanceError
-from exchange.content import Text
-from exchange.exchange import Exchange
-from exchange.moderators import PassiveModerator
-from exchange.message import Message
-from exchange.providers import Provider, Usage
-from exchange.tool import Tool
+from ai_exchange.content import Text
+from ai_exchange.exchange import Exchange
+from ai_exchange.moderators import PassiveModerator
+from ai_exchange.message import Message
+from ai_exchange.providers import Provider, Usage
+from ai_exchange.tool import Tool
 
 
 def dummy_tool() -> str:

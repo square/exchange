@@ -1,8 +1,8 @@
 import pytest
-from exchange.exchange import Exchange
-from exchange.message import Message
-from exchange.providers import get_provider
-from exchange.tool import Tool
+from ai_exchange.exchange import Exchange
+from ai_exchange.message import Message
+from ai_exchange.providers import get_provider
+from ai_exchange.tool import Tool
 
 too_long_chars = "x" * (2**20 + 1)
 

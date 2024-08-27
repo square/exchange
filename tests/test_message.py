@@ -2,8 +2,8 @@ import subprocess
 from pathlib import Path
 import pytest
 
-from exchange.message import Message
-from exchange.content import Text, ToolUse, ToolResult
+from ai_exchange.message import Message
+from ai_exchange.content import Text, ToolUse, ToolResult
 
 
 def test_user_message():
@@ -19,7 +19,7 @@ def test_assistant_message():
 
 
 def test_message_tool_use():
-    from exchange.content import ToolUse
+    from ai_exchange.content import ToolUse
 
     tu1 = ToolUse(id="1", name="tool", parameters={})
     tu2 = ToolUse(id="2", name="tool", parameters={})
@@ -29,7 +29,7 @@ def test_message_tool_use():
 
 
 def test_message_tool_result():
-    from exchange.content import ToolResult
+    from ai_exchange.content import ToolResult
 
     tr1 = ToolResult(tool_use_id="1", output="result")
     tr2 = ToolResult(tool_use_id="2", output="result")

@@ -4,10 +4,10 @@ from typing import Any, Dict, List, Tuple, Type
 
 import httpx
 
-from exchange import Message, Tool
-from exchange.content import Text, ToolResult, ToolUse
-from exchange.providers.base import Provider, Usage
-from exchange.providers.utils import raise_for_status
+from ai_exchange import Message, Tool
+from ai_exchange.content import Text, ToolResult, ToolUse
+from ai_exchange.providers.base import Provider, Usage
+from ai_exchange.providers.utils import raise_for_status
 
 ANTHROPIC_HOST = "https://api.anthropic.com/v1/messages"
 

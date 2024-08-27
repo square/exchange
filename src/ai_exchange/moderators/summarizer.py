@@ -1,8 +1,8 @@
 from typing import List, Literal, Optional, Tuple, Type, Union
 
-from exchange import Message
-from exchange.checkpoint import Checkpoint
-from exchange.moderators import ContextTruncate, Moderator, PassiveModerator
+from ai_exchange import Message
+from ai_exchange.checkpoint import Checkpoint
+from ai_exchange.moderators import ContextTruncate, Moderator, PassiveModerator
 
 MAX_TOKENS = 112000
 SUMMARIZATION_OFFSET = 40000  # Keep a max of this many tokens

@@ -2,8 +2,8 @@ import os
 from unittest.mock import patch
 
 import pytest
-from exchange import Message, Text
-from exchange.providers.openai import OpenAiProvider
+from ai_exchange import Message, Text
+from ai_exchange.providers.openai import OpenAiProvider
 
 
 @pytest.fixture

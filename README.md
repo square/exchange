@@ -20,8 +20,8 @@
 > `export OPENAI_API_KEY=your-key-here`
 
 ``` python
-from exchange import Exchange, Message, Tool
-from exchange.providers import OpenAiProvider
+from ai_exchange import Exchange, Message, Tool
+from ai_exchange.providers import OpenAiProvider
 
 def word_count(text: str):
     """Get the count of words in text
@@ -85,11 +85,11 @@ Your plugin will then be available in your application or other applications bui
 through:
 
 ``` python
-from exchange.providers import get_provider
+from ai_exchange.providers import get_provider
 
 provider = get_provider('example').from_env()
 ```
 
 [CONTRIBUTING]: CONTRIBUTING.md
-[openaiprovider]: src/exchange/providers/openai.py
+[openaiprovider]: src/ai_exchange/providers/openai.py
 [plugins]: https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/

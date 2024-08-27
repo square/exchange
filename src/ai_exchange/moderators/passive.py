@@ -1,5 +1,5 @@
 from typing import Type
-from exchange.moderators.base import Moderator
+from ai_exchange.moderators.base import Moderator
 
 
 class PassiveModerator(Moderator):

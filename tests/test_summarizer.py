@@ -1,8 +1,8 @@
 import pytest
-from exchange import Exchange, Message
-from exchange.checkpoint import Checkpoint
-from exchange.moderators.summarizer import ContextSummarizer
-from exchange.providers import Usage
+from ai_exchange import Exchange, Message
+from ai_exchange.checkpoint import Checkpoint
+from ai_exchange.moderators.summarizer import ContextSummarizer
+from ai_exchange.providers import Usage
 
 
 class MockProvider:
