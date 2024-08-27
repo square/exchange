@@ -91,7 +91,7 @@ def test_load_plugins() -> None:
         def load(self):
             return self.plugin
 
-    with patch("exchange.utils.entry_points") as entry_points_mock:
+    with patch("ai_exchange.utils.entry_points") as entry_points_mock:
         entry_points_mock.return_value = [
             DummyEntryPoint("plugin1", object()),
             DummyEntryPoint("plugin2", object()),

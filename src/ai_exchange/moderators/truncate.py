@@ -7,9 +7,9 @@ MAX_TOKENS = 112000
 
 
 def pop_checkpoint(
-    exchange: Type["exchange.exchange.Exchange"],  # noqa: F821
+    exchange: Type["ai_exchange.exchange.Exchange"],  # noqa: F821
     exclude_last: Literal[0, 1] = 0,
-) -> Type["exchange.exchange.Exchange"]:  # noqa: F821
+) -> Type["ai_exchange.exchange.Exchange"]:  # noqa: F821
     """Pop messages from the front of the list in sections"""
     checkpoint = exchange.checkpoints.pop(0)
     for _ in range(checkpoint.end_index - checkpoint.start_index - exclude_last):
@@ -34,7 +34,7 @@ class ContextTruncate(Moderator):
         self.model = model
         self.system_prompt_token_count = None
 
-    def rewrite(self, exchange: Type["exchange.exchange.Exchange"]) -> None:  # noqa: F821
+    def rewrite(self, exchange: Type["ai_exchange.exchange.Exchange"]) -> None:  # noqa: F821
         """Truncate the exchange messages with a FIFO strategy."""
         if not self.system_prompt_token_count:
             # calculate the system prompt tokens (includes functions etc...)

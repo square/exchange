@@ -12,10 +12,11 @@ dependencies = [
     "jinja2>=3.1.4",
     "tiktoken>=0.7.0",
     "httpx>=0.27.0",
+    "setuptools>=73.0.1",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/exchange"]
+packages = ["src/ai_exchange"]
 
 [build-system]
 requires = ["hatchling"]
@@ -28,16 +29,16 @@ dev-dependencies = [
 ]
 
 [project.entry-points."exchange.provider"]
-openai = "exchange.providers.openai:OpenAiProvider"
-azure = "exchange.providers.azure:AzureProvider"
-databricks = "exchange.providers.databricks:DatabricksProvider"
-anthropic = "exchange.providers.anthropic:AnthropicProvider"
-bedrock = "exchange.providers.bedrock:BedrockProvider"
+openai = "ai_exchange.providers.openai:OpenAiProvider"
+azure = "ai_exchange.providers.azure:AzureProvider"
+databricks = "ai_exchange.providers.databricks:DatabricksProvider"
+anthropic = "ai_exchange.providers.anthropic:AnthropicProvider"
+bedrock = "ai_exchange.providers.bedrock:BedrockProvider"
 
-[project.entry-points."exchange.moderator"]
-passive = "exchange.moderators.passive:PassiveModerator"
-truncate = "exchange.moderators.truncate:ContextTruncate"
-summarize = "exchange.moderators.summarizer:ContextSummarizer"
+[project.entry-points."ai_exchange.moderator"]
+passive = "ai_exchange.moderators.passive:PassiveModerator"
+truncate = "ai_exchange.moderators.truncate:ContextTruncate"
+summarize = "ai_exchange.moderators.summarizer:ContextSummarizer"
 
 
 [tool.pytest.ini_options]

@@ -10,4 +10,4 @@ from ai_exchange.moderators.summarizer import ContextSummarizer  # noqa
 
 @cache
 def get_moderator(name: str) -> Type[Moderator]:
-    return load_plugins(group="exchange.moderator")[name]
+    return load_plugins(group="ai_exchange.moderator")[name]

@@ -9,10 +9,10 @@ SUMMARIZATION_OFFSET = 40000  # Keep a max of this many tokens
 
 
 def pop_checkpoint(
-    exchange: Type["exchange.exchange.Exchange"],  # noqa: F821
+    exchange: Type["ai_exchange.exchange.Exchange"],  # noqa: F821
     exclude_last: Literal[0, 1] = 0,
     return_messages: bool = False,
-) -> Union[Tuple[List[Message], Checkpoint], Type["exchange.exchange.Exchange"]]:  # noqa: F821
+) -> Union[Tuple[List[Message], Checkpoint], Type["ai_exchange.exchange.Exchange"]]:  # noqa: F821
     """Pop messages from the front of the list in sections
 
     Inputs:
@@ -54,7 +54,7 @@ class ContextSummarizer(Moderator):
         self.max_tokens = max_tokens
         self.summarization_offset = summarization_offset
 
-    def rewrite(self, exchange: Type["exchange.exchange.Exchange"]) -> None:  # noqa: F821
+    def rewrite(self, exchange: Type["ai_exchange.exchange.Exchange"]) -> None:  # noqa: F821
         """Summarize the context history up to the last few messages in the exchange"""
         if not self.system_prompt_token_count:
             # calculate the system prompt tokens (includes functions etc...)

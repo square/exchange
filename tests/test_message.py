@@ -54,7 +54,7 @@ def test_message_load(tmpdir):
 
     # Create a temporary Python file in the sub_dir that calls the load method with a relative path
     python_file_content = """
-from exchange.message import Message
+from ai_exchange.message import Message
 
 def test_function():
     message = Message.load('template.jinja', name="a", name2="b")

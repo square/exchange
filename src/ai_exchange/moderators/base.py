@@ -4,5 +4,5 @@ from typing import Type
 
 class Moderator(ABC):
     @abstractmethod
-    def rewrite(self, exchange: Type["exchange.exchange.Exchange"]) -> None:  # noqa: F821
+    def rewrite(self, exchange: Type["ai_exchange.exchange.Exchange"]) -> None:  # noqa: F821
         pass
