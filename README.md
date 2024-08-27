@@ -54,7 +54,7 @@ print(ex.messages)
 provider not supported here, we'd be happy to review [contributions][CONTRIBUTING]. But you
 can also consider building and using your own plugin. 
 
-To create a `Provider` plugin, subclass `exchange.provider.Provider`. You will need to 
+To create a `Provider` plugin, subclass `ai_exchange.provider.Provider`. You will need to 
 implement the `complete` method. For example this is what we use as a mock in our tests.
 You can see a full implementation example of the [OpenAiProvider][openaiprovider]. We
 also generally recommend implementing a `from_env` classmethod to instantiate the provider.
