@@ -64,13 +64,15 @@ class Exchange:
     def generate(self) -> Message:
         """Generate the next message."""
         self.moderator.rewrite(self)
-
-        message, usage = self.provider.complete(
-            self.model,
-            self.system,
-            messages=self.messages,
-            tools=self.tools,
-        )
+        try:
+            message, usage = self.provider.complete(
+                self.model,
+                self.system,
+                messages=self.messages,
+                tools=self.tools,
+            )
+        except HTTPRetryFailedError as e:
+            # pop off the last message
 
         self.add(message)
         # this has to come after adding the response

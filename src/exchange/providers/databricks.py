@@ -79,6 +79,10 @@ class DatabricksProvider(Provider):
             **kwargs,
         )
         payload = {k: v for k, v in payload.items() if v}
+        # 4xx error, 5xx error, or timeout, or success
+        # on all of the above we want to retry with expontential backoff
+        # if the retry fails x many times (e.g. 5), then we want to throw
+        # the HTTPREtryFailedError defined in the base provider
         response = self.client.post(
             f"serving-endpoints/{model}/invocations",
             json=payload,
