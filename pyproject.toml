@@ -3,7 +3,7 @@ name = "ai-exchange"
 version = "0.8.0"
 description = "a uniform python SDK for message generation with LLMs"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 author = [{ name = "Block", email = "ai-oss-tools@block.xyz" }]
 packages = [{ include = "exchange", from = "src" }]
 dependencies = [
