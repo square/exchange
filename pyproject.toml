@@ -41,9 +41,8 @@ passive = "exchange.moderators.passive:PassiveModerator"
 truncate = "exchange.moderators.truncate:ContextTruncate"
 summarize = "exchange.moderators.summarizer:ContextSummarizer"
 
-[project.entry-points."exchange.plugins"]
+[project.entry-points."metadata.plugins"]
 ai-exchange = ""
-
 
 [tool.pytest.ini_options]
 markers = [
