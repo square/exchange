@@ -22,10 +22,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv]
-dev-dependencies = [
-    "pytest>=8.3.2",
-    "codecov>=2.1.13",
-]
+dev-dependencies = ["pytest>=8.3.2", "codecov>=2.1.13"]
 
 [project.entry-points."exchange.provider"]
 openai = "exchange.providers.openai:OpenAiProvider"
@@ -41,7 +38,7 @@ truncate = "exchange.moderators.truncate:ContextTruncate"
 summarize = "exchange.moderators.summarizer:ContextSummarizer"
 
 [project.entry-points."metadata.plugins"]
-ai-exchange = ""
+ai-exchange = "exchange:module_name"
 
 [tool.pytest.ini_options]
 markers = [
