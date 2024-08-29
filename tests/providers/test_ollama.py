@@ -3,12 +3,13 @@ from unittest.mock import patch
 
 import pytest
 from exchange import Message, Text
-from exchange.providers.ollama import OllamaProvider
+from exchange.providers.ollama import OLLAMA_HOST, OllamaProvider
 
 
 @pytest.fixture
 @patch.dict(os.environ, {})
 def ollama_provider():
+    os.environ["OLLAMA_HOST"] = OLLAMA_HOST
     return OllamaProvider.from_env()
 
 
@@ -45,6 +46,7 @@ def test_ollama_completion(mock_error, mock_warning, mock_sleep, mock_post, olla
 
 @pytest.mark.integration
 def test_ollama_integration():
+    os.environ["OLLAMA_HOST"] = OLLAMA_HOST
     provider = OllamaProvider.from_env()
     model = "llama2"  # specify a valid model
     system = "You are a helpful assistant."
