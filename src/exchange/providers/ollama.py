@@ -41,7 +41,7 @@ class OllamaProvider(Provider):
 
     @classmethod
     def from_env(cls: Type["OllamaProvider"]) -> "OllamaProvider":
-        url = os.environ.get("OLLAMA_HOST", OLLAMA_HOST)
+        url = os.environ["OLLAMA_HOST"]
         client = httpx.Client(
             base_url=url,
             headers={"Content-Type": "application/json"},
