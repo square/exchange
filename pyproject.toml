@@ -1,6 +1,6 @@
 [project]
 name = "ai-exchange"
-version = "0.8.0"
+version = "0.8.1"
 description = "a uniform python SDK for message generation with LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -40,6 +40,8 @@ passive = "exchange.moderators.passive:PassiveModerator"
 truncate = "exchange.moderators.truncate:ContextTruncate"
 summarize = "exchange.moderators.summarizer:ContextSummarizer"
 
+[project.entry-points."metadata.plugins"]
+ai-exchange = ""
 
 [tool.pytest.ini_options]
 markers = [
