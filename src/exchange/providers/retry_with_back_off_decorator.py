@@ -36,7 +36,7 @@ def retry_httpx_request(
     backoff_factor: Optional[float] = 1,
 ) -> Callable:
     if retry_on_status_code is None:
-        retry_on_status_code = set(range(400, 999))
+        retry_on_status_code = set(range(401, 999))
     def should_retry(response: Response) -> bool:
         return response.status_code in retry_on_status_code
 
