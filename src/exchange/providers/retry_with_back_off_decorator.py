@@ -1,7 +1,9 @@
-from functools import wraps
 import time
+from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
+
 from httpx import HTTPStatusError, Response
+
 
 def retry_with_backoff(
         should_retry: Callable, 
@@ -21,7 +23,8 @@ def retry_with_backoff(
                     break
                 sleep_time = initial_wait + (backoff_factor * (2 ** retry))
                 time.sleep(sleep_time)
-            handle_retry_exhausted(result, max_retries)
+            if handle_retry_exhausted:
+                handle_retry_exhausted(result, max_retries)
             return result
         return wrapper
     return decorator
@@ -37,7 +40,7 @@ def retry_httpx_request(
 
     def handle_retry_exhausted(response: Response, max_retries: int) -> None:
         raise HTTPStatusError(
-            f"Failed after {max_retries} retries due to flaky network or relate limiting.",
+            f"Failed after {max_retries} retries due to flaky network or rate limiting.",
             request=response.request,
             response=response,
         )
