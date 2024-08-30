@@ -138,7 +138,6 @@ class AnthropicProvider(Provider):
         )
         payload = {k: v for k, v in payload.items() if v}
 
-        # response = self._retrieve_result(payload)
         response = self._send_request(payload)
 
         response_data = raise_for_status(response).json()
