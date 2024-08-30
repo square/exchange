@@ -42,7 +42,7 @@ def retry_httpx_request(
 
     def handle_retry_exhausted(response: Response, max_retries: int) -> None:
         raise HTTPStatusError(
-            f"Failed after {max_retries} retries due to flaky network or rate limiting.",
+            f"Failed after {max_retries}.",
             request=response.request,
             response=response,
         )
