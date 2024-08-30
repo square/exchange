@@ -5,6 +5,7 @@ import httpx
 
 from exchange.message import Message
 from exchange.providers.base import Provider, Usage
+from exchange.providers.retry_with_back_off_decorator import retry_httpx_request
 from exchange.providers.utils import (
     messages_to_openai_spec,
     openai_response_to_message,
@@ -74,7 +75,7 @@ class OpenAiProvider(Provider):
             **kwargs,
         )
         payload = {k: v for k, v in payload.items() if v}
-        response = self.client.post("v1/chat/completions", json=payload)
+        response = self._send_request(payload)
 
         # Check for context_length_exceeded error for single, long input message
         if "error" in response.json() and len(messages) == 1:
@@ -85,3 +86,7 @@ class OpenAiProvider(Provider):
         message = openai_response_to_message(data)
         usage = self.get_usage(data)
         return message, usage
+
+    @retry_httpx_request()
+    def _send_request(self, payload: Any) -> httpx.Response:  # noqa: ANN401
+        return self.client.post("v1/chat/completions", json=payload)

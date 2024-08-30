@@ -12,6 +12,7 @@ import httpx
 from exchange.content import Text, ToolResult, ToolUse
 from exchange.message import Message
 from exchange.providers import Provider, Usage
+from exchange.providers.retry_with_back_off_decorator import retry_httpx_request
 from exchange.providers.utils import raise_for_status
 from exchange.tool import Tool
 
@@ -204,7 +205,7 @@ class BedrockProvider(Provider):
 
         path = f"model/{model}/converse"
 
-        response = self.client.post(path, json=payload)
+        response = self._send_request(payload, path)
         raise_for_status(response)
         response_message = response.json()["output"]["message"]
 
@@ -216,6 +217,10 @@ class BedrockProvider(Provider):
         )
 
         return self.response_to_message(response_message), usage
+
+    @retry_httpx_request()
+    def _send_request(self, payload: Any, path:str) -> httpx.Response:  # noqa: ANN401
+        return self.client.post(path, json=payload)
 
     @staticmethod
     def message_to_bedrock_spec(message: Message) -> dict:

@@ -5,6 +5,7 @@ import httpx
 
 from exchange.message import Message
 from exchange.providers.base import Provider, Usage
+from exchange.providers.retry_with_back_off_decorator import retry_httpx_request
 from exchange.providers.utils import (
     messages_to_openai_spec,
     openai_response_to_message,
@@ -79,11 +80,15 @@ class DatabricksProvider(Provider):
             **kwargs,
         )
         payload = {k: v for k, v in payload.items() if v}
-        response = self.client.post(
-            f"serving-endpoints/{model}/invocations",
-            json=payload,
-        )
+        response = self._send_request(model, payload)
         data = raise_for_status(response).json()
         message = openai_response_to_message(data)
         usage = self.get_usage(data)
         return message, usage
+
+    @retry_httpx_request()
+    def _send_request(self, model: str, payload: Any) -> httpx.Response:  # noqa: ANN401
+        return self.client.post(
+            f"serving-endpoints/{model}/invocations",
+            json=payload,
+        )
