@@ -144,7 +144,7 @@ def test_retry_httpx_request_backoff_range():
 
 
 def test_retry_httpx_request_backoff_range_retry_never_succeed():
-    mock_httpx_request_call_function = create_mock_httpx_request_call_function(responses=[400, 500, 500])
+    mock_httpx_request_call_function = create_mock_httpx_request_call_function(responses=[401, 500, 500])
 
     @retry_httpx_request(max_retries=3, initial_wait=0, backoff_factor=0.001)
     def test_func() -> Response:
@@ -161,7 +161,7 @@ def test_retry_httpx_request_backoff_range_retry_never_succeed():
 
 
 def test_retry_httpx_request_backoff_range_retry_succeed():
-    mock_httpx_request_call_function = create_mock_httpx_request_call_function(responses=[400, 500, 200])
+    mock_httpx_request_call_function = create_mock_httpx_request_call_function(responses=[401, 500, 200])
 
     @retry_httpx_request(max_retries=3, initial_wait=0, backoff_factor=0.001)
     def test_func() -> Response:
