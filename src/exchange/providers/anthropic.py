@@ -139,7 +139,7 @@ class AnthropicProvider(Provider):
         payload = {k: v for k, v in payload.items() if v}
 
         # response = self._retrieve_result(payload)
-        response = self._retrieve_with_decorator(payload)
+        response = self._send_request(payload)
 
         response_data = raise_for_status(response).json()
         message = self.anthropic_response_to_message(response_data)
@@ -148,5 +148,5 @@ class AnthropicProvider(Provider):
         return message, usage
     
     @retry_httpx_request()
-    def _retrieve_with_decorator(self, payload: Dict[str, Any]) -> httpx.Response:
+    def _send_request(self, payload: Dict[str, Any]) -> httpx.Response:
             return self.client.post(ANTHROPIC_HOST, json=payload)
