@@ -1,6 +1,6 @@
 import time
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from httpx import HTTPStatusError, Response
 
@@ -30,11 +30,13 @@ def retry_with_backoff(
     return decorator
 
 def retry_httpx_request(
-        retry_on_status_code: List[int] = [429, 529, 500],
-        max_retries: Optional[int] = 5, 
-        initial_wait: Optional[float] = 10, 
-        backoff_factor: Optional[float] = 1) -> Callable:
-    
+    retry_on_status_code: Optional[Iterable[int]] = None,
+    max_retries: Optional[int] = 5,
+    initial_wait: Optional[float] = 10,
+    backoff_factor: Optional[float] = 1,
+) -> Callable:
+    if retry_on_status_code is None:
+        retry_on_status_code = set(range(400, 999))
     def should_retry(response: Response) -> bool:
         return response.status_code in retry_on_status_code
 

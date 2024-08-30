@@ -1,8 +1,9 @@
 from unittest.mock import MagicMock
 
-from httpx import HTTPStatusError, Response
 import pytest
 from exchange.providers.retry_with_back_off_decorator import retry_httpx_request, retry_with_backoff
+from httpx import HTTPStatusError, Response
+
 
 def create_mock_function():
     mock_function = MagicMock()
@@ -73,10 +74,10 @@ def test_retry_with_backoff_without_retry():
     assert mock_function.call_count == 1
     handle_retry_exhausted_function.assert_not_called()
 
-def create_mock_httpx_request_call_function():
+def create_mock_httpx_request_call_function(responses=[500, 429, 200]):
     mock_function = MagicMock()
     mock_responses = []
-    for response_code in [500, 429, 200]:
+    for response_code in responses:
         response = MagicMock()
         response.status_code = response_code
         mock_responses.append(response)
@@ -129,3 +130,46 @@ def test_retry_httpx_request_backoff_without_retry():
     assert test_func().status_code == 500
 
     assert mock_httpx_request_call_function.call_count == 1
+
+def test_retry_httpx_request_backoff_range():
+    mock_httpx_request_call_function = create_mock_httpx_request_call_function(responses=[200])
+
+    @retry_httpx_request(max_retries=2, initial_wait=0, backoff_factor=0.001)
+    def test_func() -> Response:
+        return mock_httpx_request_call_function()
+
+    assert test_func().status_code == 200
+
+    assert mock_httpx_request_call_function.call_count == 1
+
+
+def test_retry_httpx_request_backoff_range_retry_never_succeed():
+    mock_httpx_request_call_function = create_mock_httpx_request_call_function(responses=[400, 500, 500])
+
+    @retry_httpx_request(max_retries=3, initial_wait=0, backoff_factor=0.001)
+    def test_func() -> Response:
+        return mock_httpx_request_call_function()
+
+    # Never gets a successful response
+    with pytest.raises(HTTPStatusError):
+        f = test_func()
+        # last error is 500
+        assert f.status_code == 500
+
+    # Has been retried 3 times
+    assert mock_httpx_request_call_function.call_count == 3
+
+
+def test_retry_httpx_request_backoff_range_retry_succeed():
+    mock_httpx_request_call_function = create_mock_httpx_request_call_function(responses=[400, 500, 200])
+
+    @retry_httpx_request(max_retries=3, initial_wait=0, backoff_factor=0.001)
+    def test_func() -> Response:
+        return mock_httpx_request_call_function()
+
+    # Retries and raises no error
+    f = test_func()
+    assert f.status_code == 200
+
+    # Has been retried 3 times
+    assert mock_httpx_request_call_function.call_count == 3
