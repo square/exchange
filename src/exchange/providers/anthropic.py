@@ -1,5 +1,4 @@
 import os
-import time
 from typing import Any, Dict, List, Tuple, Type
 
 import httpx
@@ -7,7 +6,7 @@ import httpx
 from exchange import Message, Tool
 from exchange.content import Text, ToolResult, ToolUse
 from exchange.providers.base import Provider, Usage
-from exchange.providers.retry_with_back_off_decorator import retry_with_backoff
+from exchange.providers.retry_with_back_off_decorator import retry_httpx_request
 from exchange.providers.utils import raise_for_status
 
 ANTHROPIC_HOST = "https://api.anthropic.com/v1/messages"
@@ -148,38 +147,6 @@ class AnthropicProvider(Provider):
 
         return message, usage
     
-    # def _retrieve_result(self, payload: Dict[str, Any]) -> Any:
-    #     max_retries = 5
-    #     initial_wait = 10  # Start with 10 seconds
-    #     backoff_factor = 1
-    #     for retry in range(max_retries):
-    #         response = self.client.post(ANTHROPIC_HOST, json=payload)
-    #         if response.status_code not in (429, 529, 500):
-    #             break
-    #         else:
-    #             sleep_time = initial_wait + (backoff_factor * (2**retry))
-    #             time.sleep(sleep_time)
-
-    #     if response.status_code in (429, 529, 500):
-    #         raise httpx.HTTPStatusError(
-    #             f"Failed after {max_retries} retries due to rate limiting",
-    #             request=response.request,
-    #             response=response,
-    #         )
-    #     return response
-
-    def should_retry(response: httpx.Response) -> bool:
-        return response.status_code in (429, 529, 500)
-    
-    def handle_failure(response: httpx.Response, max_retries: int) -> None:
-        raise httpx.HTTPStatusError(
-            f"Failed after {max_retries} retries due to rate limiting",
-            request=response.request,
-            response=response,
-        )
-    
-    @retry_with_backoff(max_retries=5, initial_wait=10, backoff_factor=1, 
-                       should_retry=should_retry, handle_failure=handle_failure)
+    @retry_httpx_request()
     def _retrieve_with_decorator(self, payload: Dict[str, Any]) -> httpx.Response:
             return self.client.post(ANTHROPIC_HOST, json=payload)
-        
