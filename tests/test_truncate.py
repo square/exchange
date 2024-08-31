@@ -1,138 +1,103 @@
 import pytest
 from exchange import Exchange
-from exchange.checkpoint import Checkpoint
 from exchange.message import Message
 from exchange.providers import Provider, Usage
-from exchange.moderators.truncate import ContextTruncate, pop_checkpoint
-from typing import List
-from exchange.content import Text
-from exchange.tool import Tool
+from exchange.moderators.truncate import ContextTruncate
+from exchange.content import ToolResult, ToolUse
+
+MAX_TOKENS = 300
+SYSTEM_PROMPT_TOKENS = 100
+
+MESSAGE_SEQUENCE = [
+    Message.user("Hi, can you help me with my homework?"),
+    Message.assistant("Of course! What do you need help with?"),
+    Message.user("I need help with math problems."),
+    Message.assistant("Sure, I can help with that. Let's get started."),
+    Message.user("What is 2 + 2, 3*3, 9/5, 2*20, 14/2?"),
+    Message(role="assistant", content=[ToolUse(id="1", name="add", parameters={"a": 2, "b": 2})]),
+    Message(role="user", content=[ToolResult(tool_use_id="1", output="4")]),
+    Message(role="assistant", content=[ToolUse(id="2", name="multiply", parameters={"a": 3, "b": 3})]),
+    Message(role="user", content=[ToolResult(tool_use_id="2", output="9")]),
+    Message(role="assistant", content=[ToolUse(id="3", name="divide", parameters={"a": 9, "b": 5})]),
+    Message(role="user", content=[ToolResult(tool_use_id="3", output="1.8")]),
+    Message(role="assistant", content=[ToolUse(id="4", name="multiply", parameters={"a": 2, "b": 20})]),
+    Message(role="user", content=[ToolResult(tool_use_id="4", output="40")]),
+    Message(role="assistant", content=[ToolUse(id="5", name="divide", parameters={"a": 14, "b": 2})]),
+    Message(role="user", content=[ToolResult(tool_use_id="5", output="7")]),
+    Message.assistant("I'm done calculating the answers to your math questions."),
+    Message.user("Can you also help with my science homework?"),
+    Message.assistant("Yes, I can help with science too."),
+    Message.user("What is the speed of light? The frequency of a photon? The mass of an electron?"),
+    Message(role="assistant", content=[ToolUse(id="6", name="speed_of_light", parameters={})]),
+    Message(role="user", content=[ToolResult(tool_use_id="6", output="299,792,458 m/s")]),
+    Message(role="assistant", content=[ToolUse(id="7", name="photon_frequency", parameters={})]),
+    Message(role="user", content=[ToolResult(tool_use_id="7", output="2.418 x 10^14 Hz")]),
+    Message(role="assistant", content=[ToolUse(id="8", name="electron_mass", parameters={})]),
+    Message(role="user", content=[ToolResult(tool_use_id="8", output="9.10938356 x 10^-31 kg")]),
+    Message.assistant("I'm done calculating the answers to your science questions."),
+    Message.user("That's great! How about history?"),
+    Message.assistant("Of course, I can help with history as well."),
+    Message.user("Thanks! You're very helpful."),
+    Message.assistant("You're welcome! I'm here to help."),
+]
 
 
-class MockProvider(Provider):
-    def __init__(self, sequence: List[Message], usage_dicts: List[dict]):
-        # We'll use init to provide a preplanned reply sequence
-        self.total_counts = len(sequence)
-        self.sequence = sequence
-        self.call_count = 0
-        self.prev_count = 0
-        self.usage_dicts = usage_dicts
+class TruncateLinearProvider(Provider):
+    def __init__(self):
+        self.sequence = MESSAGE_SEQUENCE
+        self.current_index = 1
+        self.summarize_next = False
+        self.summarized_count = 0
 
-    @staticmethod
-    def get_usage(data: dict) -> Usage:
-        usage = data.get("usage", {})
-        input_tokens = usage.get("input_tokens")
-        output_tokens = usage.get("output_tokens")
-        total_tokens = usage.get("total_tokens")
+    def complete(self, model, system, messages, tools):
+        input_token_count = SYSTEM_PROMPT_TOKENS
 
-        if total_tokens is None and input_tokens is not None and output_tokens is not None:
-            total_tokens = input_tokens + output_tokens
+        message = self.sequence[self.current_index]
 
-        return Usage(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=total_tokens,
-        )
+        if len(messages) > 0 and type(messages[0].content[0]) is ToolResult:
+            raise ValueError("ToolResult should not be the first message")
 
-    def complete(self, model: str, system: str, messages: List[Message], tools: List[Tool]) -> Message:
-        # truncate moderator does a second call to generate in the first pass, hence this skip
-        output = self.sequence[self.call_count % self.total_counts]
-        usage = self.get_usage(self.usage_dicts[self.call_count % self.total_counts])
-        # truncate moderator does a second call to generate in the first pass, hence this skip
-        if self.call_count == 0 and self.prev_count == 0:
-            self.prev_count += 1
+        if len(messages) == 0:
+            return Message.assistant("Getting system prompt size"), Usage(
+                input_tokens=80, output_tokens=20, total_tokens=SYSTEM_PROMPT_TOKENS
+            )
+
+        for i in range(len(messages)):
+            if type(messages[i].content[0]) in (ToolResult, ToolUse):
+                input_token_count += 10
+            else:
+                input_token_count += len(messages[i].text) * 2
+
+        if type(message.content[0]) in (ToolResult, ToolUse):
+            output_tokens = 10
         else:
-            self.call_count += 1
-        return (output, usage)
+            output_tokens = len(message.text) * 2
+
+        total_tokens = input_token_count + output_tokens
+        usage = Usage(input_tokens=input_token_count, output_tokens=output_tokens, total_tokens=total_tokens)
+        self.current_index += 2
+        return message, usage
 
 
 @pytest.fixture
-def exchange():
-    messages = [Message(role="user", content=[Text(text="Hello")])]
-    checkpoints = [Checkpoint(start_index=0, end_index=1, token_count=100, latest_generated_tokens=50)]
-    provider = MockProvider(
-        sequence=[
-            Message(
-                role="assistant",
-                content=[Text(text="Mock response")],
-            ),
-            Message(
-                role="assistant",
-                content=[Text(text="Mock response 2")],
-            ),
-            Message(
-                role="assistant",
-                content=[Text(text="This is a long context response")],
-            ),
-            Message(
-                role="assistant",
-                content=[Text(text="Normal Mock response")],
-            ),
-        ],
-        usage_dicts=[
-            {"usage": {"input_tokens": 100 + 20, "output_tokens": 124000 // 2}},
-            {
-                "usage": {
-                    "input_tokens": (100 + 20 + 124000 // 2) + 30,
-                    "output_tokens": 40,
-                }
-            },
-            {
-                "usage": {
-                    "input_tokens": (100 + 20 + 30 + 40 + 124000 // 2) + 50,
-                    "output_tokens": 126000 // 2,
-                }
-            },
-            #  this is where truncation will get adjusted the input tokens for
-            # next batch will be total tokens from last two usage dicts
-            # which equals 63000 + 50 + 40 + 30
-            {"usage": {"input_tokens": 63220 + 11, "output_tokens": 26}},
-        ],
+def conversation_exchange_instance():
+    ex = Exchange(
+        provider=TruncateLinearProvider(),
+        model="test-model",
+        system="test-system",
+        moderator=ContextTruncate(max_tokens=500),
     )
-    exchange = Exchange(
-        provider=provider,
-        model="test_model",
-        system="test_system",
-        moderator=ContextTruncate(),
-        tools=[],
-        messages=messages,
-        checkpoints=checkpoints,
-    )
-    return exchange
+    ex.checkpoint_data.reset()
+    return ex
 
 
-def test_pop_checkpoint(exchange):
-    exchange.reply()  # get assistant response and adds to checkpoint/messages
-    exchange.add(Message(role="user", content=[Text(text="Hi2")]))
-    exchange.reply()  # get assistant response and adds to checkpoint/messages for 2
-
-    new_exchange = pop_checkpoint(exchange)
-    assert len(new_exchange.checkpoints) == 2
-    assert len(new_exchange.messages) == 3
-
-    assert new_exchange.checkpoints[0].start_index == 0
-    assert new_exchange.checkpoints[0].end_index == 1
-    assert new_exchange.checkpoints[0].token_count == 124000 // 2 + 20
-    assert new_exchange.checkpoints[1].start_index == 1
-    assert new_exchange.checkpoints[1].end_index == 3
-    assert new_exchange.checkpoints[1].token_count == 30 + 40
-
-
-def test_context_truncate_rewrite(exchange):
-    # exchange.checkpoints.append(Checkpoint(start_index=1, end_index=2, token_count=112000+250,
-    # latest_generated_tokens=50))
-    exchange.messages.append(Message(role="user", content=[Text(text="user Hi again")]))
-    exchange.reply()
-    exchange.messages.append(Message(role="user", content=[Text(text="go AI!")]))
-    exchange.reply()
-    exchange.messages.append(Message(role="user", content=[Text(text="long context coming")]))
-    exchange.reply()
-    exchange.messages.append(Message(role="user", content=[Text(text="small_context")]))
-    exchange.reply()
-
-    # note we create a new exchange in ContextTruncate to get the system_prompt tokens.
-    # In this test, it executes the sequence in the MockProvider above and thus the system prompt is 112 tokens
-    # exchange.moderator.rewrite()
-    assert sum(cp.token_count for cp in exchange.checkpoints) <= 112000
-    assert exchange.checkpoints[0].token_count == 190
-    assert exchange.checkpoints[0].latest_generated_tokens == 40
+def test_truncate_on_generic_conversation(conversation_exchange_instance: Exchange):
+    i = 0
+    while i < len(MESSAGE_SEQUENCE):
+        next_message = MESSAGE_SEQUENCE[i]
+        conversation_exchange_instance.add(next_message)
+        message = conversation_exchange_instance.generate()
+        if message.text != "Summary message here":
+            i += 2
+        # ensure the total token count is not anything exhorbitant
+        assert conversation_exchange_instance.checkpoint_data.total_token_count < 700

@@ -6,10 +6,11 @@ from typing import Any, Dict, List, Mapping, Tuple
 from attrs import define, evolve, field
 from tiktoken import get_encoding
 
-from exchange.checkpoint import Checkpoint
+from exchange.checkpoint import Checkpoint, CheckpointData
 from exchange.content import ToolResult, ToolUse
 from exchange.message import Message
-from exchange.moderators import ContextTruncate, Moderator
+from exchange.moderators import Moderator
+from exchange.moderators.passive import PassiveModerator
 from exchange.providers import Provider, Usage
 from exchange.tool import Tool
 
@@ -38,10 +39,10 @@ class Exchange:
     provider: Provider
     model: str
     system: str
-    moderator: Moderator = field(default=ContextTruncate())
+    moderator: Moderator = field(default=PassiveModerator())
     tools: Tuple[Tool] = field(factory=tuple, converter=tuple)
     messages: List[Message] = field(factory=list)
-    checkpoints: List[Checkpoint] = field(factory=list)
+    checkpoint_data: CheckpointData = field(default=CheckpointData())
 
     @property
     def _toolmap(self) -> Mapping[str, Tool]:
@@ -51,8 +52,10 @@ class Exchange:
         """Make a copy of the exchange, replacing any passed arguments"""
         if kwargs.get("messages") is None:
             kwargs["messages"] = deepcopy(self.messages)
-        if kwargs.get("checkpoints") is None:
-            kwargs["checkpoints"] = deepcopy(self.checkpoints)
+        if kwargs.get("checkpoint_data") is None:
+            kwargs["checkpoint_data"] = deepcopy(
+                self.checkpoint_data,
+            )
         return evolve(self, **kwargs)
 
     def add(self, message: Message) -> None:
@@ -73,8 +76,14 @@ class Exchange:
         )
 
         self.add(message)
-        # this has to come after adding the response
-        self.add_checkpoint(usage)
+        self.add_checkpoints_from_usage(usage)  # this has to come after adding the response
+
+        # TODO: also call `rewrite` here, as this will make our
+        # messages *consistently* below the token limit. this currently
+        # is not the case because we could append a large message after calling
+        # `rewrite` above.
+
+        # self.moderator.rewrite(self)
 
         return message
 
@@ -158,16 +167,144 @@ class Exchange:
         self.add(Message(role="assistant", content=[tool_use]))
         self.add(Message(role="user", content=[tool_result]))
 
-    def add_checkpoint(self, usage: Usage) -> None:
-        self.checkpoints.append(
+    def add_checkpoints_from_usage(self, usage: Usage) -> None:
+        """
+        Add checkpoints to the exchange based on the token counts of the last two
+        groups of messages, as well as the current token total count of the exchange
+        """
+        # we know we just appended one message as the response from the LLM
+        # so we need to create two checkpoints as we know the token counts
+        # of the last two groups of messages:
+        # 1. from the last checkpoint to the most recent user message
+        # 2. the most recent assistant message
+        last_checkpoint_end_index = (
+            self.checkpoint_data.checkpoints[-1].end_index - self.checkpoint_data.message_index_offset
+            if len(self.checkpoint_data.checkpoints) > 0
+            else -1
+        )
+        new_start_index = last_checkpoint_end_index + 1
+
+        # here, our self.checkpoint_data.total_token_count is the previous total token count from the last time
+        # that we performed a request. if we subtract this value from the input_tokens from our
+        # latest response, we know how many tokens our **1** from above is.
+        first_block_token_count = usage.input_tokens - self.checkpoint_data.total_token_count
+        second_block_token_count = usage.output_tokens
+
+        if len(self.messages) - new_start_index > 1:
+            # this case may come up if the user manipulates the message queue. e.g. if the
+            # user performs the following actions:
+            # 1. adds a message
+            # 2. calls pop_last_checkpoint
+            # 3. adds another message
+            # 4. calls reply
+            self.checkpoint_data.checkpoints.append(
+                Checkpoint(
+                    start_index=new_start_index + self.checkpoint_data.message_index_offset,
+                    end_index=len(self.messages) - 2 + self.checkpoint_data.message_index_offset,
+                    token_count=first_block_token_count,
+                )
+            )
+        self.checkpoint_data.checkpoints.append(
             Checkpoint(
-                start_index=(0 if not self.checkpoints else self.checkpoints[-1].end_index),
-                end_index=len(self.messages),
-                token_count=(
-                    usage.total_tokens
-                    if not self.checkpoints
-                    else usage.total_tokens - sum(cp.token_count for cp in self.checkpoints)
-                ),
-                latest_generated_tokens=usage.output_tokens,
+                start_index=len(self.messages) - 1 + self.checkpoint_data.message_index_offset,
+                end_index=len(self.messages) - 1 + self.checkpoint_data.message_index_offset,
+                token_count=second_block_token_count,
             )
         )
+
+        # TODO: check if the front of the checkpoints doesn't overlap with
+        # the first message. if so, we are missing checkpoint data from
+        # message[0] to message[checkpoint_data.checkpoints[0].start_index]
+        # we can fill in this data by performing an extra request and doing some math
+        self.checkpoint_data.total_token_count = usage.total_tokens
+
+    def pop_last_message(self) -> Message:
+        """Pop the last message from the exchange, handling checkpoints correctly"""
+        if (
+            len(self.checkpoint_data.checkpoints) > 0
+            and self.checkpoint_data.last_message_index > len(self.messages) - 1
+        ):
+            raise ValueError("Our checkpoint data is out of sync with our message data")
+        if (
+            len(self.checkpoint_data.checkpoints) > 0
+            and self.checkpoint_data.last_message_index == len(self.messages) - 1
+        ):
+            # remove the last checkpoint, because we no longer know the token count of it's contents.
+            # note that this is not the same as reverting to the last checkpoint, as we want to
+            # keep the messages from the last checkpoint. they will have a new checkpoint created for
+            # them when we call generate() again
+            self.checkpoint_data.pop()
+        self.messages.pop()
+
+    def pop_first_message(self) -> Message:
+        """Pop the first message from the exchange, handling checkpoints correctly"""
+        if len(self.messages) == 0:
+            raise ValueError("There are no messages to pop")
+        if len(self.checkpoint_data.checkpoints) == 0:
+            raise ValueError("There must be at least one checkpoint to pop the first message")
+
+        # get the start and end indexes of the first checkpoint, use these to remove message
+        first_checkpoint = self.checkpoint_data.checkpoints[0]
+        first_checkpoint_start_index = first_checkpoint.start_index - self.checkpoint_data.message_index_offset
+
+        # check if the first message is part of the first checkpoint
+        if first_checkpoint_start_index == 0:
+            # remove this checkpoint, as it no longer has any messages
+            self.checkpoint_data.pop(0)
+
+        self.messages.pop(0)
+        self.checkpoint_data.message_index_offset += 1
+
+        if len(self.checkpoint_data.checkpoints) == 0:
+            # we've removed all the checkpoints, so we need to reset the message index offset
+            self.checkpoint_data.message_index_offset = 0
+
+    def pop_last_checkpoint(self) -> Tuple[Checkpoint, List[Message]]:
+        """
+        Reverts the exchange back to the last checkpoint, removing associated messages
+        """
+        removed_checkpoint = self.checkpoint_data.checkpoints.pop()
+        # pop messages until we reach the start of the next checkpoint
+        while len(self.messages) > removed_checkpoint.start_index - self.checkpoint_data.message_index_offset:
+            self.messages.pop()
+
+    def pop_first_checkpoint(self) -> Tuple[Checkpoint, List[Message]]:
+        """
+        Pop the first checkpoint from the exchange, removing associated messages
+        """
+        if len(self.checkpoint_data.checkpoints) == 0:
+            raise ValueError("There are no checkpoints to pop")
+        first_checkpoint = self.checkpoint_data.pop(0)
+
+        # remove messages until we reach the start of the next checkpoint
+        messages = []
+        stop_at_index = first_checkpoint.end_index - self.checkpoint_data.message_index_offset
+        for _ in range(stop_at_index + 1):  # +1 because it's inclusive
+            messages.append(self.messages.pop(0))
+            self.checkpoint_data.message_index_offset += 1
+
+        if len(self.checkpoint_data.checkpoints) == 0:
+            # we've removed all the checkpoints, so we need to reset the message index offset
+            self.checkpoint_data.message_index_offset = 0
+        return first_checkpoint, messages
+
+    def prepend_checkpointed_message(self, message: Message, token_count: int) -> None:
+        """Prepend a message to the exchange, updating the checkpoint data"""
+        self.messages.insert(0, message)
+        new_index = max(0, self.checkpoint_data.message_index_offset - 1)
+        self.checkpoint_data.checkpoints.insert(
+            0,
+            Checkpoint(
+                start_index=new_index,
+                end_index=new_index,
+                token_count=token_count,
+            ),
+        )
+        self.checkpoint_data.message_index_offset = new_index
+
+    @property
+    def is_allowed_to_call_llm(self) -> bool:
+        """
+        Returns True if the exchange is allowed to call the LLM, False otherwise
+        """
+        return len(self.messages) > 0 and self.messages[-1].role == "user"

@@ -1,135 +1,52 @@
-from typing import List, Literal, Optional, Tuple, Type, Union
+from typing import Type
 
 from exchange import Message
-from exchange.checkpoint import Checkpoint
-from exchange.moderators import ContextTruncate, Moderator, PassiveModerator
+from exchange.moderators import ContextTruncate, PassiveModerator
 
-MAX_TOKENS = 112000
-SUMMARIZATION_OFFSET = 40000  # Keep a max of this many tokens
-
-
-def pop_checkpoint(
-    exchange: Type["exchange.exchange.Exchange"],  # noqa: F821
-    exclude_last: Literal[0, 1] = 0,
-    return_messages: bool = False,
-) -> Union[Tuple[List[Message], Checkpoint], Type["exchange.exchange.Exchange"]]:  # noqa: F821
-    """Pop messages from the front of the list in sections
-
-    Inputs:
-        exchange (Exchange): An Exchange instance to pop checkpoints off of
-        exclude_last (Literal[0,1]): integer flag whether to remove all messages in
-            the checkpoint (0), or remove all except the last message (1).
-    """
-    removed_messages = []
-    checkpoint = exchange.checkpoints.pop(0)
-    for _ in range(checkpoint.end_index - checkpoint.start_index - exclude_last):
-        removed_messages.append(exchange.messages.pop(checkpoint.start_index))
-
-    # rewrite checkpoint indexes
-    for cp in exchange.checkpoints:
-        cp.start_index = cp.start_index - checkpoint.end_index + exclude_last
-        cp.end_index = cp.end_index - checkpoint.end_index + exclude_last
-
-    if exclude_last:
-        # there is still one entry in the first checkpoint only
-        checkpoint.token_count = checkpoint.latest_generated_tokens
-        checkpoint.end_index = exclude_last
-        exchange.checkpoints.insert(0, checkpoint)
-
-    if return_messages:
-        return removed_messages, checkpoint
-    else:
-        return exchange
+# currently this is the point at which we start to summarize, so
+# so once we get to this token size the token count will exceed this
+# by a little bit
+MAX_TOKENS = 70000
 
 
-class ContextSummarizer(Moderator):
-    def __init__(
-        self,
-        model: Optional[str] = "gpt-4o-mini",
-        max_tokens: Optional[int] = MAX_TOKENS,
-        summarization_offset: Optional[int] = SUMMARIZATION_OFFSET,
-    ) -> None:
-        self.model = model
-        self.system_prompt_token_count = None
-        self.max_tokens = max_tokens
-        self.summarization_offset = summarization_offset
-
+class ContextSummarizer(ContextTruncate):
     def rewrite(self, exchange: Type["exchange.exchange.Exchange"]) -> None:  # noqa: F821
         """Summarize the context history up to the last few messages in the exchange"""
-        if not self.system_prompt_token_count:
-            # calculate the system prompt tokens (includes functions etc...)
-            _system_token_exchange = exchange.replace(
-                messages=[],
-                checkpoints=[],
-                moderator=PassiveModerator(),
-                model=self.model if self.model else exchange.model,
-            )
-            _ = _system_token_exchange.generate()
-            checkpoint = _system_token_exchange.checkpoints.pop()
-            self.system_prompt_token_count = checkpoint.token_count - checkpoint.latest_generated_tokens
 
-        if sum(cp.token_count for cp in exchange.checkpoints) > self.max_tokens:
-            # this keeps all the messages/checkpoints
-            throwaway_exchange = exchange.replace(
-                moderator=PassiveModerator(),
-            )
+        self._update_system_prompt_token_count(exchange)
 
-            # keep latest summarization_offset tokens in context, summarize the rest
-            removed_checkpoints = 0
-            messages_to_summarize = []
-            while sum(cp.token_count for cp in throwaway_exchange.checkpoints) > self.summarization_offset:
-                m, c = pop_checkpoint(throwaway_exchange, return_messages=True)
-                messages_to_summarize.extend(m)
-                removed_checkpoints += 1
+        if exchange.checkpoint_data.total_token_count < self.max_tokens:
+            return
 
-            exclude_last = False
-            if throwaway_exchange.messages[0].tool_result:
-                m, c = pop_checkpoint(throwaway_exchange, exclude_last=1, return_messages=True)
-                messages_to_summarize.extend(m)
-                exclude_last = True
+        messages_to_summarize = self._get_messages_to_remove(exchange)
+        num_messages_to_remove = len(messages_to_summarize)
 
-            if messages_to_summarize[-1].role == "assistant" and (not messages_to_summarize[-1].tool_use):
-                messages_to_summarize.append(Message.user("Summarize our the above conversation"))
+        # the llm will throw an error if the last message isn't a user message
+        if messages_to_summarize[-1].role == "assistant" and (not messages_to_summarize[-1].tool_use):
+            messages_to_summarize.append(Message.user("Summarize our the above conversation"))
 
-            summarizer_exchange = exchange.replace(
-                system=Message.load("summarizer.jinja").text,
-                moderator=ContextTruncate(),
-                model=self.model,
-                messages=messages_to_summarize,
-                checkpoints=[],
-            )
+        summarizer_exchange = exchange.replace(
+            system=Message.load("summarizer.jinja").text,
+            moderator=PassiveModerator(),
+            model=self.model,
+            messages=messages_to_summarize,
+            # checkpoint_data=CheckpointData(),
+            # TODO: figure out why the summarizer exchange has checkpoint data that is not empty
+            # we are currently getting around this via the line below calling .reset()
+        )
+        summarizer_exchange.checkpoint_data.reset()
 
-            summary = summarizer_exchange.reply()
-            summary_checkpoint = summarizer_exchange.checkpoints[-1]
+        # get the summarized content and the tokens associated with this content
+        summary = summarizer_exchange.reply()
+        summary_checkpoint = summarizer_exchange.checkpoint_data.checkpoints[-1]
 
-            # pop out all the messages up
-            for _ in range(removed_checkpoints):
-                pop_checkpoint(exchange)
+        # remove the checkpoints that were summarized from the original exchange
+        for _ in range(num_messages_to_remove):
+            exchange.pop_first_message()
 
-            # if first message is a tool_result, it means there's no matching pair. remove it
-            if exclude_last:
-                pop_checkpoint(exchange, exclude_last=1)
-
-            # insert summary as first message/checkpoint
-            if exchange.messages[0].role == "assistant":
-                summary_message = Message.user(summary.text)
-            else:
-                summary_message = Message.assistant(summary.text)
-
-            exchange.messages.insert(0, summary_message)
-
-            # insert a new checkpoint with the summary message
-            exchange.checkpoints.insert(
-                0,
-                Checkpoint(
-                    start_index=0,
-                    end_index=1,
-                    token_count=summary_checkpoint.latest_generated_tokens + self.system_prompt_token_count,
-                    latest_generated_tokens=summary_checkpoint.latest_generated_tokens,
-                ),
-            )
-
-            # update checkpoint indices
-            for cp in exchange.checkpoints[1:]:
-                cp.start_index = cp.start_index + 1
-                cp.end_index = cp.end_index + 1
+        # insert summary as first message/checkpoint
+        if len(exchange.messages) == 0 or exchange.messages[0].role == "assistant":
+            summary_message = Message.user(summary.text)
+        else:
+            summary_message = Message.assistant(summary.text)
+        exchange.prepend_checkpointed_message(summary_message, summary_checkpoint.token_count)
