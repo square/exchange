@@ -303,6 +303,7 @@ def resumed_exchange() -> Exchange:
         model="gpt-4o-2024-05-13",
         system="You are a helpful assistant.",
         checkpoint_data=CheckpointData(),
+        moderator=PassiveModerator(),
     )
     return ex
 

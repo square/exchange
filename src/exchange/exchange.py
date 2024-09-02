@@ -10,8 +10,7 @@ from exchange.checkpoint import Checkpoint, CheckpointData
 from exchange.content import ToolResult, ToolUse
 from exchange.message import Message
 from exchange.moderators import Moderator
-from exchange.moderators.passive import PassiveModerator
-from exchange.moderators.summarizer import ContextSummarizer
+from exchange.moderators.truncate import ContextTruncate
 from exchange.providers import Provider, Usage
 from exchange.tool import Tool
 
@@ -40,7 +39,7 @@ class Exchange:
     provider: Provider
     model: str
     system: str
-    moderator: Moderator = field(default=PassiveModerator())
+    moderator: Moderator = field(default=ContextTruncate())
     tools: Tuple[Tool] = field(factory=tuple, converter=tuple)
     messages: List[Message] = field(factory=list)
     checkpoint_data: CheckpointData = field(factory=CheckpointData)
@@ -51,12 +50,9 @@ class Exchange:
 
     def replace(self, **kwargs: Dict[str, Any]) -> "Exchange":
         """Make a copy of the exchange, replacing any passed arguments"""
-        # updates to the model and checkpoint_data are coupled, so we need to ensure
-        # that they are updated together
-        if (kwargs.get("model") is not None and kwargs.get("checkpoint_data") is None) or (
-            kwargs.get("checkpoint_data") is not None and kwargs.get("model") is None
-        ):
-            raise ValueError("Both `model` and `checkpoint_data` must be updated together")
+        # TODO: ensure that the checkpoint data is updated correctly. aka,
+        # if we replace the messages, we need to update the checkpoint data
+        # if we change the model, we need to update the checkpoint data (?)
 
         if kwargs.get("messages") is None:
             kwargs["messages"] = deepcopy(self.messages)
@@ -90,7 +86,6 @@ class Exchange:
         # messages *consistently* below the token limit. this currently
         # is not the case because we could append a large message after calling
         # `rewrite` above.
-
         # self.moderator.rewrite(self)
 
         return message
