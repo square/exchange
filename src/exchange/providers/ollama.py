@@ -15,41 +15,47 @@ from exchange.providers.utils import (
 )
 from exchange.tool import Tool
 
-OPENAI_HOST = "https://api.openai.com/"
+OLLAMA_HOST = "http://localhost:11434/"
 
+#
+# NOTE: this is experimental, best used with 70B model or larger if you can. 
+# Example profile config to try:
+class OllamaProvider(Provider):
+    """Provides chat completions for models hosted by Ollama"""
 
-class OpenAiProvider(Provider):
-    """Provides chat completions for models hosted directly by OpenAI"""
+    """
+
+        ollama:
+          provider: ollama
+          processor: llama3.1
+          accelerator: llama3.1
+          moderator: passive
+          toolkits:
+          - name: developer
+            requires: {}
+    """    
 
     def __init__(self, client: httpx.Client) -> None:
+        print('PLEASE NOTE: the ollama provider is experimental, use with care')
         super().__init__()
         self.client = client
 
     @classmethod
-    def from_env(cls: Type["OpenAiProvider"]) -> "OpenAiProvider":
-        url = os.environ.get("OPENAI_HOST", OPENAI_HOST)
-        try:
-            key = os.environ["OPENAI_API_KEY"]
-        except KeyError:
-            raise RuntimeError(
-                "Failed to get OPENAI_API_KEY from the environment, see https://platform.openai.com/docs/api-reference/api-keys"
-            )
+    def from_env(cls: Type["OllamaProvider"]) -> "OllamaProvider":
+        url = os.environ["OLLAMA_HOST"]
         client = httpx.Client(
             base_url=url,
-            auth=("Bearer", key),
+            headers={"Content-Type": "application/json"},
             timeout=httpx.Timeout(60 * 10),
         )
         return cls(client)
 
     @staticmethod
     def get_usage(data: dict) -> Usage:
-        usage = data.pop("usage")
-        input_tokens = usage.get("prompt_tokens")
-        output_tokens = usage.get("completion_tokens")
-        total_tokens = usage.get("total_tokens")
-
-        if total_tokens is None and input_tokens is not None and output_tokens is not None:
-            total_tokens = input_tokens + output_tokens
+        usage = data.get("usage", {})
+        input_tokens = usage.get("prompt_tokens", 0)
+        output_tokens = usage.get("completion_tokens", 0)
+        total_tokens = usage.get("total_tokens", input_tokens + output_tokens)
 
         return Usage(
             input_tokens=input_tokens,

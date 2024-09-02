@@ -138,3 +138,9 @@ docs/docs/reference
 
 # goose files 
 .goose
+
+# lock file
+uv.lock
+
+# PyCharm
+.idea/

@@ -113,7 +113,7 @@ def test_message_to_bedrock_spec_tool_result(bedrock_provider):
 
 
 def test_message_to_bedrock_spec_tool_result_text(bedrock_provider):
-    tool_result = ToolResult(tool_use_id="tool-1", output="Error occured", is_error=True)
+    tool_result = ToolResult(tool_use_id="tool-1", output="Error occurred", is_error=True)
     message = Message(role="user", content=[tool_result])
     expected = {
         "role": "user",
@@ -121,7 +121,7 @@ def test_message_to_bedrock_spec_tool_result_text(bedrock_provider):
             {
                 "toolResult": {
                     "toolUseId": "tool-1",
-                    "content": [{"text": "Error occured"}],
+                    "content": [{"text": "Error occurred"}],
                     "status": "error",
                 }
             }

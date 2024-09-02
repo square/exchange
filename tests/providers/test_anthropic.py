@@ -175,4 +175,4 @@ def test_anthropic_integration():
     reply = provider.complete(model=model, system=system, messages=messages)
 
     assert reply[0].content is not None
-    print("Completion content from Anthropics:", reply[0].content)
+    print("Completion content from Anthropic:", reply[0].content)

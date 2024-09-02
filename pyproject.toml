@@ -1,9 +1,9 @@
 [project]
 name = "ai-exchange"
-version = "0.8.0"
+version = "0.8.2"
 description = "a uniform python SDK for message generation with LLMs"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 author = [{ name = "Block", email = "ai-oss-tools@block.xyz" }]
 packages = [{ include = "exchange", from = "src" }]
 dependencies = [
@@ -22,10 +22,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv]
-dev-dependencies = [
-    "pytest>=8.3.2",
-    "codecov>=2.1.13",
-]
+dev-dependencies = ["pytest>=8.3.2", "codecov>=2.1.13"]
 
 [project.entry-points."exchange.provider"]
 openai = "exchange.providers.openai:OpenAiProvider"
@@ -33,12 +30,15 @@ azure = "exchange.providers.azure:AzureProvider"
 databricks = "exchange.providers.databricks:DatabricksProvider"
 anthropic = "exchange.providers.anthropic:AnthropicProvider"
 bedrock = "exchange.providers.bedrock:BedrockProvider"
+ollama = "exchange.providers.ollama:OllamaProvider"
 
 [project.entry-points."exchange.moderator"]
 passive = "exchange.moderators.passive:PassiveModerator"
 truncate = "exchange.moderators.truncate:ContextTruncate"
 summarize = "exchange.moderators.summarizer:ContextSummarizer"
 
+[project.entry-points."metadata.plugins"]
+ai-exchange = "exchange:module_name"
 
 [tool.pytest.ini_options]
 markers = [
