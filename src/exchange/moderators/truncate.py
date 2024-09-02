@@ -8,7 +8,7 @@ from exchange.moderators.base import Moderator
 # currently this is the point at which we start to truncate, so
 # so once we get to this token size the token count will exceed this
 # by a little bit
-MAX_TOKENS = 70000
+MAX_TOKENS = 100000
 
 
 class ContextTruncate(Moderator):

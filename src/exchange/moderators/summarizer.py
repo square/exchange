@@ -1,12 +1,13 @@
 from typing import Type
 
 from exchange import Message
+from exchange.checkpoint import CheckpointData
 from exchange.moderators import ContextTruncate, PassiveModerator
 
 # currently this is the point at which we start to summarize, so
 # so once we get to this token size the token count will exceed this
 # by a little bit
-MAX_TOKENS = 70000
+MAX_TOKENS = 100000
 
 
 class ContextSummarizer(ContextTruncate):
@@ -30,11 +31,8 @@ class ContextSummarizer(ContextTruncate):
             moderator=PassiveModerator(),
             model=self.model,
             messages=messages_to_summarize,
-            # checkpoint_data=CheckpointData(),
-            # TODO: figure out why the summarizer exchange has checkpoint data that is not empty
-            # we are currently getting around this via the line below calling .reset()
+            checkpoint_data=CheckpointData(),
         )
-        summarizer_exchange.checkpoint_data.reset()
 
         # get the summarized content and the tokens associated with this content
         summary = summarizer_exchange.reply()

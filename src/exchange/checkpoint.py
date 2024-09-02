@@ -11,12 +11,6 @@ class Checkpoint:
     end_index: int = field(default=0)  # inclusive
     token_count: int = field(default=0)
 
-    def __copy__(self) -> "Checkpoint":
-        """
-        Returns a deep copy of the Checkpoint object.
-        """
-        return Checkpoint(start_index=self.start_index, end_index=self.end_index, token_count=self.token_count)
-
     def __deepcopy__(self, _) -> "Checkpoint":
         """
         Returns a deep copy of the Checkpoint object.
@@ -28,17 +22,19 @@ class Checkpoint:
 class CheckpointData:
     """Aggregates all information about checkpoints"""
 
+    # the total number of tokens in the exchange. this is updated every time a checkpoint is
+    # added or removed
     total_token_count: int = field(default=0)
-    checkpoints: List[Checkpoint] = field(default=[])
-    message_index_offset: int = field(default=0)
 
-    def __copy__(self) -> "CheckpointData":
-        """Returns a deep copy of the CheckpointData object."""
-        return CheckpointData(
-            total_token_count=self.total_token_count,
-            checkpoints=deepcopy(self.checkpoints),
-            message_index_offset=self.message_index_offset,
-        )
+    # in order list of individual checkpoints in the exchange
+    checkpoints: List[Checkpoint] = field(factory=list)
+
+    # the offset to apply to the message index when calculating the last message index
+    # this is useful because messages on the exchange behave like a queue, where you can only
+    # pop from the left or right sides. This offset allows us to map the checkpoint indices
+    # to the correct message index, even if we have popped messages from the left side of
+    # the exchange in the past. we reset this offset to 0 when we empty the checkpoint data.
+    message_index_offset: int = field(default=0)
 
     def __deepcopy__(self, memo: dict) -> "CheckpointData":
         """Returns a deep copy of the CheckpointData object."""

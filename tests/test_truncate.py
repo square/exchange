@@ -87,7 +87,6 @@ def conversation_exchange_instance():
         system="test-system",
         moderator=ContextTruncate(max_tokens=500),
     )
-    ex.checkpoint_data.reset()
     return ex
 
 

@@ -40,7 +40,6 @@ def exchange_instance():
         ],
         moderator=PassiveModerator(),
     )
-    ex.checkpoint_data.reset()
     return ex
 
 
@@ -171,7 +170,6 @@ def conversation_exchange_instance():
         # TODO: make it work with an offset so we don't have to send off requests basically
         # at every generate step
     )
-    ex.checkpoint_data.reset()
     return ex
 
 

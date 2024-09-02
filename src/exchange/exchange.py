@@ -11,6 +11,7 @@ from exchange.content import ToolResult, ToolUse
 from exchange.message import Message
 from exchange.moderators import Moderator
 from exchange.moderators.passive import PassiveModerator
+from exchange.moderators.summarizer import ContextSummarizer
 from exchange.providers import Provider, Usage
 from exchange.tool import Tool
 
@@ -42,7 +43,7 @@ class Exchange:
     moderator: Moderator = field(default=PassiveModerator())
     tools: Tuple[Tool] = field(factory=tuple, converter=tuple)
     messages: List[Message] = field(factory=list)
-    checkpoint_data: CheckpointData = field(default=CheckpointData())
+    checkpoint_data: CheckpointData = field(factory=CheckpointData)
 
     @property
     def _toolmap(self) -> Mapping[str, Tool]:
@@ -50,6 +51,13 @@ class Exchange:
 
     def replace(self, **kwargs: Dict[str, Any]) -> "Exchange":
         """Make a copy of the exchange, replacing any passed arguments"""
+        # updates to the model and checkpoint_data are coupled, so we need to ensure
+        # that they are updated together
+        if (kwargs.get("model") is not None and kwargs.get("checkpoint_data") is None) or (
+            kwargs.get("checkpoint_data") is not None and kwargs.get("model") is None
+        ):
+            raise ValueError("Both `model` and `checkpoint_data` must be updated together")
+
         if kwargs.get("messages") is None:
             kwargs["messages"] = deepcopy(self.messages)
         if kwargs.get("checkpoint_data") is None:
@@ -191,15 +199,15 @@ class Exchange:
         second_block_token_count = usage.output_tokens
 
         if len(self.messages) - new_start_index > 1:
-            # this case may come up if the user manipulates the message queue. e.g. if the
-            # user performs the following actions:
-            # 1. adds a message
-            # 2. calls pop_last_checkpoint
-            # 3. adds another message
-            # 4. calls reply
+            # this will occur most of the time, as we will have one new user message and one
+            # new assistant message.
+
             self.checkpoint_data.checkpoints.append(
                 Checkpoint(
                     start_index=new_start_index + self.checkpoint_data.message_index_offset,
+                    # end index below is equivalent to the second last message. why? becuase
+                    # the last message is the assistant message that we add below. we need to also
+                    # track the token count of the user message sent.
                     end_index=len(self.messages) - 2 + self.checkpoint_data.message_index_offset,
                     token_count=first_block_token_count,
                 )
@@ -265,8 +273,10 @@ class Exchange:
         """
         removed_checkpoint = self.checkpoint_data.checkpoints.pop()
         # pop messages until we reach the start of the next checkpoint
+        messages = []
         while len(self.messages) > removed_checkpoint.start_index - self.checkpoint_data.message_index_offset:
-            self.messages.pop()
+            messages.append(self.messages.pop())
+        return removed_checkpoint, messages
 
     def pop_first_checkpoint(self) -> Tuple[Checkpoint, List[Message]]:
         """
@@ -307,4 +317,7 @@ class Exchange:
         """
         Returns True if the exchange is allowed to call the LLM, False otherwise
         """
+        # TODO: reconsider whether this function belongs here and whether it is necessary
+        # Some models will have different requirements than others, so it may be better for
+        # this to be a required method of the provider instead.
         return len(self.messages) > 0 and self.messages[-1].role == "user"

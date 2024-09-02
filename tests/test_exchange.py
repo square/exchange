@@ -275,7 +275,6 @@ def normal_exchange() -> Exchange:
         moderator=PassiveModerator(),
         checkpoint_data=CheckpointData(),
     )
-    ex.checkpoint_data.reset()
     return ex
 
 
@@ -305,7 +304,6 @@ def resumed_exchange() -> Exchange:
         system="You are a helpful assistant.",
         checkpoint_data=CheckpointData(),
     )
-    ex.checkpoint_data.reset()
     return ex
 
 
