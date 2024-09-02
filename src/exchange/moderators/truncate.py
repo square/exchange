@@ -7,7 +7,8 @@ from exchange.moderators.base import Moderator
 
 # currently this is the point at which we start to truncate, so
 # so once we get to this token size the token count will exceed this
-# by a little bit
+# by a little bit.
+# TODO: make this configurable for each provider
 MAX_TOKENS = 100000
 
 

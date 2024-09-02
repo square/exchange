@@ -4,11 +4,6 @@ from exchange import Message
 from exchange.checkpoint import CheckpointData
 from exchange.moderators import ContextTruncate, PassiveModerator
 
-# currently this is the point at which we start to summarize, so
-# so once we get to this token size the token count will exceed this
-# by a little bit
-MAX_TOKENS = 100000
-
 
 class ContextSummarizer(ContextTruncate):
     def rewrite(self, exchange: Type["exchange.exchange.Exchange"]) -> None:  # noqa: F821
@@ -16,6 +11,7 @@ class ContextSummarizer(ContextTruncate):
 
         self._update_system_prompt_token_count(exchange)
 
+        # TODO: use an offset for summarization
         if exchange.checkpoint_data.total_token_count < self.max_tokens:
             return
 
