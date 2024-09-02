@@ -55,5 +55,5 @@ class ContextTruncate(Moderator):
             if exchange.messages[0].tool_result:
                 pop_checkpoint(exchange, exclude_last=1)
 
-            # Update the token count on the the first checkpoint to reflect the system prompt
+            # Update the token count on the first checkpoint to reflect the system prompt
             exchange.checkpoints[0].token_count += self.system_prompt_token_count

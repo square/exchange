@@ -141,3 +141,6 @@ docs/docs/reference
 
 # lock file
 uv.lock
+
+# PyCharm
+.idea/
