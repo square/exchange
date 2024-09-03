@@ -17,6 +17,9 @@ from exchange.tool import Tool
 
 FAILED_TO_GENERATE_MSG = "Failed to generate the next message."
 
+# TODO: decide on the correct number of retries here
+REMOVE_MESSAGE_RETRY_TIMES = 3
+
 
 def validate_tool_output(output: str) -> None:
     """Validate tool output for the given model"""
@@ -102,7 +105,7 @@ class Exchange:
                     self.pop_last_message()
                 num_times_attempted += 1
 
-        if num_times_attempted >= 3:
+        if num_times_attempted >= REMOVE_MESSAGE_RETRY_TIMES:
             # we failed to generate a response after three attempts
             raise Exception(FAILED_TO_GENERATE_MSG)
 
