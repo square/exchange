@@ -703,14 +703,39 @@ class MockErrorProvider(Provider):
         return next_item, Usage(input_tokens=10, output_tokens=10, total_tokens=20)
 
 
-def test_generate_http_error_recovery():
+def test_generate_http_error_recovery_empty_messages():
     ex = Exchange(
         provider=MockErrorProvider(sequence=[Exception(), Message(role="assistant", content=[Text("Hello")])]),
         model="gpt-4o-2024-05-13",
         system="You are a helpful assistant.",
+        moderator=PassiveModerator(),
     )
     ex.add(Message(role="user", content=[Text("Hello")]))
     ex.generate()
+
+
+def test_generate_http_error_changes_messages():
+    ex = Exchange(
+        provider=MockErrorProvider(
+            sequence=[
+                Message(role="assistant", content=[ToolUse(id="1", name="dishwasher", parameters={})]),
+                Exception(),
+                Message.assistant("I'm done cleaning the dishes."),
+            ]
+        ),
+        model="gpt-4o-2024-05-13",
+        system="You are a helpful assistant.",
+        moderator=PassiveModerator(),
+    )
+    ex.add(Message.user("Hi! Can you clean the dishes for me?"))
+    ex.generate()
+    ex.add(Message(role="user", content=[ToolResult(tool_use_id="1", output="I cleaned the dishes.")]))
+    ex.generate()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert ex.messages[0].text == "Hi! Can you clean the dishes for me?"
+    assert ex.messages[1].text == "I'm done cleaning the dishes."
 
 
 def test_generate_http_error_no_recovery():
@@ -718,6 +743,7 @@ def test_generate_http_error_no_recovery():
         provider=MockErrorProvider(sequence=[Exception()]),
         model="gpt-4o-2024-05-13",
         system="You are a helpful assistant.",
+        moderator=PassiveModerator(),
     )
     ex.add(Message(role="user", content=[Text("Hello")]))
     with pytest.raises(Exception) as e:
