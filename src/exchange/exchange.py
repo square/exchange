@@ -96,9 +96,9 @@ class Exchange:
                     self.pop_last_message()
                 num_times_attempted += 1
 
-        if num_times_attempted == 3:
+        if num_times_attempted >= 3:
             # we failed to generate a response after three attempts
-            raise Exception("Failed to generate the next message.", 500)
+            raise Exception("Failed to generate the next message.")
 
         self.add(message)
         self.add_checkpoints_from_usage(usage)  # this has to come after adding the response

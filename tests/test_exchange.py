@@ -1,5 +1,7 @@
 from typing import List, Tuple
+from unittest.mock import Mock
 
+from httpx import HTTPStatusError
 import pytest
 
 from exchange.checkpoint import Checkpoint, CheckpointData
@@ -687,11 +689,37 @@ def test_generate_successful_response_on_first_try(normal_exchange):
     ex.generate()
 
 
+class MockErrorProvider(Provider):
+    def __init__(self, sequence: List[Message | Exception]):
+        self.sequence = sequence
+        self.call_count = 0
+
+    def complete(self, model: str, system: str, messages: List[Message], tools: List[Tool]) -> Message:
+        next_item = self.sequence[self.call_count]
+        if self.call_count != len(self.sequence) - 1:
+            self.call_count += 1
+        if isinstance(next_item, Exception):
+            raise HTTPStatusError("Bad Request", request=Mock(), response=Mock())
+        return next_item, Usage(input_tokens=10, output_tokens=10, total_tokens=20)
+
+
 def test_generate_http_error_recovery():
-    # TODO
-    pass
+    ex = Exchange(
+        provider=MockErrorProvider(sequence=[Exception(), Message(role="assistant", content=[Text("Hello")])]),
+        model="gpt-4o-2024-05-13",
+        system="You are a helpful assistant.",
+    )
+    ex.add(Message(role="user", content=[Text("Hello")]))
+    ex.generate()
 
 
 def test_generate_http_error_no_recovery():
-    # TODO
-    pass
+    ex = Exchange(
+        provider=MockErrorProvider(sequence=[Exception()]),
+        model="gpt-4o-2024-05-13",
+        system="You are a helpful assistant.",
+    )
+    ex.add(Message(role="user", content=[Text("Hello")]))
+    with pytest.raises(Exception) as e:
+        ex.generate()
+    assert str(e.value) == "Failed to generate the next message."
