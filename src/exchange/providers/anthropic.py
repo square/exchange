@@ -145,7 +145,7 @@ class AnthropicProvider(Provider):
         usage = self.get_usage(response_data)
 
         return message, usage
-    
+
     @retry_httpx_request()
     def _send_request(self, payload: Dict[str, Any]) -> httpx.Response:
-            return self.client.post(ANTHROPIC_HOST, json=payload)
+        return self.client.post(ANTHROPIC_HOST, json=payload)

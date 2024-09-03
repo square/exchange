@@ -7,12 +7,15 @@ from exchange.providers.azure import AzureProvider
 
 
 @pytest.fixture
-@patch.dict(os.environ, {
-    "AZURE_CHAT_COMPLETIONS_HOST_NAME": "https://test.openai.azure.com/",
-    "AZURE_CHAT_COMPLETIONS_DEPLOYMENT_NAME": "test-deployment",
-    "AZURE_CHAT_COMPLETIONS_DEPLOYMENT_API_VERSION": "2024-02-15-preview",
-    "AZURE_CHAT_COMPLETIONS_KEY": "test_api_key"
-})
+@patch.dict(
+    os.environ,
+    {
+        "AZURE_CHAT_COMPLETIONS_HOST_NAME": "https://test.openai.azure.com/",
+        "AZURE_CHAT_COMPLETIONS_DEPLOYMENT_NAME": "test-deployment",
+        "AZURE_CHAT_COMPLETIONS_DEPLOYMENT_API_VERSION": "2024-02-15-preview",
+        "AZURE_CHAT_COMPLETIONS_KEY": "test_api_key",
+    },
+)
 def azure_provider():
     return AzureProvider.from_env()
 

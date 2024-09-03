@@ -11,11 +11,15 @@ class Checkpoint:
     end_index: int = field(default=0)  # inclusive
     token_count: int = field(default=0)
 
-    def __deepcopy__(self, _) -> "Checkpoint":
+    def __deepcopy__(self, _) -> "Checkpoint":  # noqa: ANN001
         """
         Returns a deep copy of the Checkpoint object.
         """
-        return Checkpoint(start_index=self.start_index, end_index=self.end_index, token_count=self.token_count)
+        return Checkpoint(
+            start_index=self.start_index,
+            end_index=self.end_index,
+            token_count=self.token_count,
+        )
 
 
 @define

@@ -23,38 +23,30 @@ class AzureProvider(Provider):
         super().__init__()
         self.client = client
         self.deployment_name = deployment_name
-        self.api_version = api_version  
+        self.api_version = api_version
 
     @classmethod
     def from_env(cls: Type["AzureProvider"]) -> "AzureProvider":
         try:
             url = os.environ["AZURE_CHAT_COMPLETIONS_HOST_NAME"]
         except KeyError:
-            raise RuntimeError(
-                "Failed to get AZURE_CHAT_COMPLETIONS_HOST_NAME from the environment."
-            )
-        
+            raise RuntimeError("Failed to get AZURE_CHAT_COMPLETIONS_HOST_NAME from the environment.")
+
         try:
             deployment_name = os.environ["AZURE_CHAT_COMPLETIONS_DEPLOYMENT_NAME"]
         except KeyError:
-            raise RuntimeError(
-                "Failed to get AZURE_CHAT_COMPLETIONS_DEPLOYMENT_NAME from the environment."
-            )
-        
+            raise RuntimeError("Failed to get AZURE_CHAT_COMPLETIONS_DEPLOYMENT_NAME from the environment.")
+
         try:
             api_version = os.environ["AZURE_CHAT_COMPLETIONS_DEPLOYMENT_API_VERSION"]
         except KeyError:
-            raise RuntimeError(
-                "Failed to get AZURE_CHAT_COMPLETIONS_DEPLOYMENT_API_VERSION from the environment."
-            )
-        
+            raise RuntimeError("Failed to get AZURE_CHAT_COMPLETIONS_DEPLOYMENT_API_VERSION from the environment.")
+
         try:
             key = os.environ["AZURE_CHAT_COMPLETIONS_KEY"]
         except KeyError:
-            raise RuntimeError(
-                "Failed to get AZURE_CHAT_COMPLETIONS_KEY from the environment."
-            )
-        
+            raise RuntimeError("Failed to get AZURE_CHAT_COMPLETIONS_KEY from the environment.")
+
         # format the url host/"openai/deployments/" + deployment_name + "/chat/completions?api-version=" + api_version
         url = f"{url}/openai/deployments/{deployment_name}"
         client = httpx.Client(
@@ -111,6 +103,6 @@ class AzureProvider(Provider):
         usage = self.get_usage(data)
         return message, usage
 
-    @retry_httpx_request()  
+    @retry_httpx_request()
     def _send_request(self, payload: Any, request_url: str) -> httpx.Response:  # noqa: ANN401
         return self.client.post(request_url, json=payload)
