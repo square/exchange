@@ -1,5 +1,8 @@
-from typing import List
+from typing import List, Tuple
 
+import pytest
+
+from exchange.checkpoint import Checkpoint, CheckpointData
 from exchange.content import Text, ToolResult, ToolUse
 from exchange.exchange import Exchange
 from exchange.message import Message
@@ -15,6 +18,17 @@ def dummy_tool() -> str:
 
 too_long_output = "x" * (2**20 + 1)
 too_long_token_output = "word " * 128000
+
+
+def assert_no_overlapping_checkpoints(exchange: Exchange) -> None:
+    """Assert that there are no overlapping checkpoints in the exchange."""
+    for i, checkpoint in enumerate(exchange.checkpoint_data.checkpoints):
+        for other_checkpoint in exchange.checkpoint_data.checkpoints[i + 1 :]:
+            assert checkpoint.end_index < other_checkpoint.start_index
+
+
+def checkpoint_to_index_pairs(checkpoints: List[Checkpoint]) -> List[Tuple[int, int]]:
+    return [(checkpoint.start_index, checkpoint.end_index) for checkpoint in checkpoints]
 
 
 class MockProvider(Provider):
@@ -236,56 +250,67 @@ def test_tool_output_too_long_token_error():
     )
 
 
-def test_usage_param():
-    usage_tests = {
-        0: ({"usage": {"total_tokens": 35}}, 35),
-        1: ({"usage": {"input_tokens": 12, "output_tokens": 23}}, 35),
-    }
-
-    for count, (usage_dict, outcome) in usage_tests.items():
-        ex = Exchange(
-            provider=MockProvider(
-                sequence=[
-                    Message(
-                        role="assistant",
-                        content=[Text(text="Here is the completion after tool call")],
-                    ),
-                ],
-                usage_dicts=[usage_dict],
-            ),
-            model="gpt-4o-2024-05-13",
-            system="You are a helpful assistant.",
-            tools=(Tool.from_function(dummy_tool),),
-            moderator=PassiveModerator(),
-        )
-
-        ex.add(Message(role="user", content=[Text(text="test")]))
-
-        ex.reply()
-        assert ex.checkpoints.pop(-1).token_count == outcome
-
-
-def test_checkpoints_on_exchange():
-    """Test checkpoints on an exchange."""
+@pytest.fixture(scope="function")
+def normal_exchange() -> Exchange:
     ex = Exchange(
         provider=MockProvider(
             sequence=[
                 Message(role="assistant", content=[Text(text="Message 1")]),
                 Message(role="assistant", content=[Text(text="Message 2")]),
                 Message(role="assistant", content=[Text(text="Message 3")]),
+                Message(role="assistant", content=[Text(text="Message 4")]),
+                Message(role="assistant", content=[Text(text="Message 5")]),
             ],
             usage_dicts=[
-                {"usage": {"total_tokens": 10}},
-                {"usage": {"total_tokens": 28}},
-                {"usage": {"total_tokens": 33}},
+                {"usage": {"total_tokens": 10, "input_tokens": 5, "output_tokens": 5}},
+                {"usage": {"total_tokens": 28, "input_tokens": 10, "output_tokens": 18}},
+                {"usage": {"total_tokens": 33, "input_tokens": 28, "output_tokens": 5}},
+                {"usage": {"total_tokens": 40, "input_tokens": 32, "output_tokens": 8}},
+                {"usage": {"total_tokens": 50, "input_tokens": 40, "output_tokens": 10}},
             ],
         ),
         model="gpt-4o-2024-05-13",
         system="You are a helpful assistant.",
         tools=(Tool.from_function(dummy_tool),),
         moderator=PassiveModerator(),
+        checkpoint_data=CheckpointData(),
     )
+    return ex
 
+
+@pytest.fixture(scope="function")
+def resumed_exchange() -> Exchange:
+    messages = [
+        Message(role="user", content=[Text(text="User message 1")]),
+        Message(role="assistant", content=[Text(text="Assistant Message 1")]),
+        Message(role="user", content=[Text(text="User message 2")]),
+        Message(role="assistant", content=[Text(text="Assistant Message 2")]),
+        Message(role="user", content=[Text(text="User message 3")]),
+        Message(role="assistant", content=[Text(text="Assistant Message 3")]),
+    ]
+    provider = MockProvider(
+        sequence=[
+            Message(role="assistant", content=[Text(text="Assistant Message 4")]),
+        ],
+        usage_dicts=[
+            {"usage": {"total_tokens": 40, "input_tokens": 32, "output_tokens": 8}},
+        ],
+    )
+    ex = Exchange(
+        provider=provider,
+        messages=messages,
+        tools=[],
+        model="gpt-4o-2024-05-13",
+        system="You are a helpful assistant.",
+        checkpoint_data=CheckpointData(),
+        moderator=PassiveModerator(),
+    )
+    return ex
+
+
+def test_checkpoints_on_exchange(normal_exchange):
+    """Test checkpoints on an exchange."""
+    ex = normal_exchange
     ex.add(Message(role="user", content=[Text(text="User message")]))
     ex.reply()
     ex.add(Message(role="user", content=[Text(text="User message")]))
@@ -294,12 +319,12 @@ def test_checkpoints_on_exchange():
     ex.reply()
 
     # Check if checkpoints are created correctly
-    checkpoints = ex.checkpoints
-    print(checkpoints)
-    assert len(checkpoints) == 3
-    assert checkpoints[0].token_count == 10
-    assert checkpoints[1].token_count == 18
-    assert checkpoints[2].token_count == 5
+    checkpoints = ex.checkpoint_data.checkpoints
+    assert len(checkpoints) == 6
+    for i in range(len(ex.messages)):
+        # asserting that each message has a corresponding checkpoint
+        assert checkpoints[i].start_index == i
+        assert checkpoints[i].end_index == i
 
     # Check if the messages are ordered correctly
     assert [msg.content[0].text for msg in ex.messages] == [
@@ -310,3 +335,347 @@ def test_checkpoints_on_exchange():
         "User message",
         "Message 3",
     ]
+    assert_no_overlapping_checkpoints(ex)
+
+
+def test_checkpoints_on_resumed_exchange(resumed_exchange) -> None:
+    ex = resumed_exchange
+    ex.pop_last_message()
+    ex.reply()
+
+    checkpoints = ex.checkpoint_data.checkpoints
+    assert len(checkpoints) == 2
+    assert len(ex.messages) == 6
+    assert checkpoints[0].token_count == 32
+    assert checkpoints[0].start_index == 0
+    assert checkpoints[0].end_index == 4
+    assert checkpoints[1].token_count == 8
+    assert checkpoints[1].start_index == 5
+    assert checkpoints[1].end_index == 5
+    assert_no_overlapping_checkpoints(ex)
+
+
+def test_pop_last_checkpoint_on_resumed_exchange(resumed_exchange) -> None:
+    ex = resumed_exchange
+    ex.add(Message(role="user", content=[Text(text="Assistant Message 4")]))
+    ex.reply()
+    ex.pop_last_checkpoint()
+
+    assert len(ex.messages) == 7
+    assert len(ex.checkpoint_data.checkpoints) == 1
+
+    ex.pop_last_checkpoint()
+    assert len(ex.messages) == 0
+    assert len(ex.checkpoint_data.checkpoints) == 0
+    assert_no_overlapping_checkpoints(ex)
+
+
+def test_pop_last_checkpoint_on_normal_exchange(normal_exchange) -> None:
+    ex = normal_exchange
+    ex.add(Message(role="user", content=[Text(text="User message")]))
+    ex.reply()
+    ex.add(Message(role="user", content=[Text(text="User message")]))
+    ex.reply()
+    ex.pop_last_checkpoint()
+    ex.pop_last_checkpoint()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert_no_overlapping_checkpoints(ex)
+    ex.add(Message(role="user", content=[Text(text="User message")]))
+    ex.pop_last_checkpoint()
+    assert len(ex.messages) == 1
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    ex.reply()
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert_no_overlapping_checkpoints(ex)
+
+
+def test_pop_first_message_no_messages():
+    ex = Exchange(
+        provider=MockProvider(sequence=[], usage_dicts=[]),
+        model="gpt-4o-2024-05-13",
+        system="You are a helpful assistant.",
+        tools=[Tool.from_function(dummy_tool)],
+        moderator=PassiveModerator(),
+    )
+
+    with pytest.raises(ValueError) as e:
+        ex.pop_first_message()
+    assert str(e.value) == "There are no messages to pop"
+
+
+def test_pop_first_message_checkpoint_with_many_messages(resumed_exchange):
+    ex = resumed_exchange
+    ex.pop_last_message()
+    ex.reply()
+
+    assert len(ex.messages) == 6
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert ex.checkpoint_data.checkpoints[0].start_index == 0
+    assert ex.checkpoint_data.checkpoints[0].end_index == 4
+    assert ex.checkpoint_data.checkpoints[1].start_index == 5
+    assert ex.checkpoint_data.checkpoints[1].end_index == 5
+    assert ex.checkpoint_data.message_index_offset == 0
+    assert_no_overlapping_checkpoints(ex)
+
+    ex.pop_first_message()
+
+    assert len(ex.messages) == 5
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert ex.checkpoint_data.checkpoints[0].start_index == 5
+    assert ex.checkpoint_data.checkpoints[0].end_index == 5
+    assert ex.checkpoint_data.message_index_offset == 1
+    assert_no_overlapping_checkpoints(ex)
+
+    ex.pop_first_message()
+
+    assert len(ex.messages) == 4
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert ex.checkpoint_data.checkpoints[0].start_index == 5
+    assert ex.checkpoint_data.checkpoints[0].end_index == 5
+    assert ex.checkpoint_data.message_index_offset == 2
+    assert_no_overlapping_checkpoints(ex)
+
+    ex.pop_first_message()
+
+    assert len(ex.messages) == 3
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert ex.checkpoint_data.checkpoints[0].start_index == 5
+    assert ex.checkpoint_data.checkpoints[0].end_index == 5
+    assert ex.checkpoint_data.message_index_offset == 3
+    assert_no_overlapping_checkpoints(ex)
+
+    ex.pop_first_message()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert ex.checkpoint_data.checkpoints[0].start_index == 5
+    assert ex.checkpoint_data.checkpoints[0].end_index == 5
+    assert ex.checkpoint_data.message_index_offset == 4
+    assert_no_overlapping_checkpoints(ex)
+
+    ex.pop_first_message()
+
+    assert len(ex.messages) == 1
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert ex.checkpoint_data.checkpoints[0].start_index == 5
+    assert ex.checkpoint_data.checkpoints[0].end_index == 5
+    assert ex.checkpoint_data.message_index_offset == 5
+    assert_no_overlapping_checkpoints(ex)
+
+    ex.pop_first_message()
+
+    assert len(ex.messages) == 0
+    assert len(ex.checkpoint_data.checkpoints) == 0
+    assert ex.checkpoint_data.message_index_offset == 0
+    assert_no_overlapping_checkpoints(ex)
+
+    with pytest.raises(ValueError) as e:
+        ex.pop_first_message()
+
+    assert str(e.value) == "There are no messages to pop"
+
+
+def test_varied_message_manipulation(normal_exchange):
+    ex = normal_exchange
+    ex.add(Message(role="user", content=[Text(text="User message 1")]))
+    ex.reply()
+
+    ex.pop_first_message()
+
+    ex.add(Message(role="user", content=[Text(text="User message 2")]))
+    ex.reply()
+
+    assert len(ex.messages) == 3
+    assert len(ex.checkpoint_data.checkpoints) == 3
+    assert ex.checkpoint_data.message_index_offset == 1
+    # (start, end)
+    # (1, 1), (2, 2), (3, 3)
+    # actual_index_in_messages_arr = any checkpoint index - offset
+    assert_no_overlapping_checkpoints(ex)
+    for i in range(3):
+        assert ex.checkpoint_data.checkpoints[i].start_index == i + 1
+        assert ex.checkpoint_data.checkpoints[i].end_index == i + 1
+
+    ex.pop_last_message()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert ex.checkpoint_data.message_index_offset == 1
+    assert_no_overlapping_checkpoints(ex)
+    for i in range(2):
+        assert ex.checkpoint_data.checkpoints[i].start_index == i + 1
+        assert ex.checkpoint_data.checkpoints[i].end_index == i + 1
+
+    ex.add(Message(role="assistant", content=[Text(text="Assistant message")]))
+    ex.add(Message(role="user", content=[Text(text="User message 3")]))
+    ex.reply()
+
+    assert len(ex.messages) == 5
+    assert len(ex.checkpoint_data.checkpoints) == 4
+    assert ex.checkpoint_data.message_index_offset == 1
+    assert_no_overlapping_checkpoints(ex)
+    assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(1, 1), (2, 2), (3, 4), (5, 5)]
+
+    ex.pop_last_checkpoint()
+
+    assert len(ex.messages) == 4
+    assert len(ex.checkpoint_data.checkpoints) == 3
+    assert ex.checkpoint_data.message_index_offset == 1
+    assert_no_overlapping_checkpoints(ex)
+    assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(1, 1), (2, 2), (3, 4)]
+
+    ex.pop_first_message()
+
+    assert len(ex.messages) == 3
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert ex.checkpoint_data.message_index_offset == 2
+    assert_no_overlapping_checkpoints(ex)
+    assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2), (3, 4)]
+
+    ex.pop_last_message()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert ex.checkpoint_data.message_index_offset == 2
+    assert_no_overlapping_checkpoints(ex)
+    assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2)]
+
+    ex.pop_last_message()
+    assert len(ex.messages) == 1
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert ex.checkpoint_data.message_index_offset == 2
+    assert_no_overlapping_checkpoints(ex)
+    assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2)]
+
+    ex.add(Message(role="assistant", content=[Text(text="Assistant message")]))
+    ex.add(Message(role="user", content=[Text(text="User message 5")]))
+    ex.pop_last_checkpoint()
+
+    assert len(ex.messages) == 0
+    assert len(ex.checkpoint_data.checkpoints) == 0
+
+    ex.add(Message(role="user", content=[Text(text="User message 6")]))
+    ex.reply()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert ex.checkpoint_data.message_index_offset == 2
+    assert_no_overlapping_checkpoints(ex)
+    assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2), (3, 3)]
+
+    ex.pop_last_message()
+
+    assert len(ex.messages) == 1
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert ex.checkpoint_data.message_index_offset == 2
+    assert_no_overlapping_checkpoints(ex)
+    assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2)]
+
+    ex.pop_first_message()
+
+    assert len(ex.messages) == 0
+    assert len(ex.checkpoint_data.checkpoints) == 0
+    assert ex.checkpoint_data.message_index_offset == 0
+
+    ex.add(Message(role="user", content=[Text(text="User message 7")]))
+    ex.pop_last_message()
+
+    assert len(ex.messages) == 0
+    assert len(ex.checkpoint_data.checkpoints) == 0
+    assert ex.checkpoint_data.message_index_offset == 0
+
+
+def test_pop_last_message_when_no_checkpoints_but_messages_present(normal_exchange):
+    ex = normal_exchange
+    ex.add(Message(role="user", content=[Text(text="User message")]))
+
+    ex.pop_last_message()
+
+    assert len(ex.messages) == 0
+    assert len(ex.checkpoint_data.checkpoints) == 0
+    assert ex.checkpoint_data.message_index_offset == 0
+
+
+def test_pop_first_message_when_no_checkpoints_but_message_present(normal_exchange):
+    ex = normal_exchange
+    ex.add(Message(role="user", content=[Text(text="User message")]))
+
+    with pytest.raises(ValueError) as e:
+        ex.pop_first_message()
+
+    assert str(e.value) == "There must be at least one checkpoint to pop the first message"
+
+
+def test_pop_first_checkpoint_size_n(resumed_exchange):
+    ex = resumed_exchange
+    ex.pop_last_message()  # needed because the last message is an assistant message
+    ex.reply()
+
+    ex.pop_first_checkpoint()
+    assert ex.checkpoint_data.message_index_offset == 5
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert len(ex.messages) == 1
+
+    ex.pop_first_checkpoint()
+    assert ex.checkpoint_data.message_index_offset == 0
+    assert len(ex.checkpoint_data.checkpoints) == 0
+    assert len(ex.messages) == 0
+
+
+def test_pop_first_checkpoint_size_1(normal_exchange):
+    ex = normal_exchange
+    ex.add(Message(role="user", content=[Text(text="User message")]))
+    ex.reply()
+
+    ex.pop_first_checkpoint()
+    assert ex.checkpoint_data.message_index_offset == 1
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert len(ex.messages) == 1
+
+    ex.pop_first_checkpoint()
+    assert ex.checkpoint_data.message_index_offset == 0
+    assert len(ex.checkpoint_data.checkpoints) == 0
+    assert len(ex.messages) == 0
+
+
+def test_pop_first_checkpoint_no_checkpoints(normal_exchange):
+    ex = normal_exchange
+
+    with pytest.raises(ValueError) as e:
+        ex.pop_first_checkpoint()
+
+    assert str(e.value) == "There are no checkpoints to pop"
+
+
+def test_prepend_checkpointed_message_empty_exchange(normal_exchange):
+    ex = normal_exchange
+    ex.prepend_checkpointed_message(Message(role="assistant", content=[Text(text="Assistant message")]), 10)
+
+    assert ex.checkpoint_data.message_index_offset == 0
+    assert len(ex.checkpoint_data.checkpoints) == 1
+    assert ex.checkpoint_data.checkpoints[0].start_index == 0
+    assert ex.checkpoint_data.checkpoints[0].end_index == 0
+
+    ex.add(Message(role="user", content=[Text(text="User message")]))
+    ex.reply()
+
+    assert ex.checkpoint_data.message_index_offset == 0
+    assert len(ex.checkpoint_data.checkpoints) == 3
+    assert len(ex.messages) == 3
+    assert_no_overlapping_checkpoints(ex)
+
+    ex.pop_first_checkpoint()
+
+    assert ex.checkpoint_data.message_index_offset == 1
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert len(ex.messages) == 2
+    assert_no_overlapping_checkpoints(ex)
+
+    ex.prepend_checkpointed_message(Message(role="assistant", content=[Text(text="Assistant message")]), 10)
+    assert ex.checkpoint_data.message_index_offset == 0
+    assert len(ex.checkpoint_data.checkpoints) == 3
+    assert len(ex.messages) == 3
+    assert_no_overlapping_checkpoints(ex)
