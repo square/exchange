@@ -705,12 +705,16 @@ class MockErrorProvider(Provider):
 
 def test_generate_http_error_recovery_empty_messages():
     ex = Exchange(
-        provider=MockErrorProvider(sequence=[Exception(), Message(role="assistant", content=[Text("Hello")])]),
+        provider=MockErrorProvider(
+            sequence=[Message.assistant("Some text"), Exception(), Message.assistant("Some other text")]
+        ),
         model="gpt-4o-2024-05-13",
         system="You are a helpful assistant.",
         moderator=PassiveModerator(),
     )
-    ex.add(Message(role="user", content=[Text("Hello")]))
+    ex.add(Message.user("Hello"))
+    ex.generate()
+    ex.add(Message.user("Hello again!"))
     ex.generate()
 
 

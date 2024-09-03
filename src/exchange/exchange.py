@@ -93,9 +93,9 @@ class Exchange:
                 )
                 break
             except HTTPStatusError:
-                if len(self.messages) == 0:
+                if len(self.messages) <= 1:
                     # we can't pop any messages, so we have to give up
-                    Exception(FAILED_TO_GENERATE_MSG)
+                    raise Exception(FAILED_TO_GENERATE_MSG)
                 self.pop_last_message()
                 while len(self.messages) > 1 and self.messages[-1].role == "assistant":
                     # why 1? because we need to keep at least one user message in the exchange
