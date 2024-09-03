@@ -4,6 +4,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Mapping, Tuple
 
 from attrs import define, evolve, field
+from httpx import HTTPStatusError
 from tiktoken import get_encoding
 
 from exchange.checkpoint import Checkpoint, CheckpointData
@@ -72,12 +73,32 @@ class Exchange:
         """Generate the next message."""
         self.moderator.rewrite(self)
 
-        message, usage = self.provider.complete(
-            self.model,
-            self.system,
-            messages=self.messages,
-            tools=self.tools,
-        )
+        num_times_attempted = 0
+        while num_times_attempted < 3:
+            # we will attempt to generate a response with retries a few times.
+            # if we run into an HTTP error, we will pop the last message until the last
+            # message is a user message, and then try again. we will do this three
+            # times before giving up.
+            # providers that are hosted on your own machine should not throw HTTP errors,
+            # and could instead configure their own behavior by throwing a different type
+            # of error.
+            try:
+                message, usage = self.provider.complete(
+                    self.model,
+                    self.system,
+                    messages=self.messages,
+                    tools=self.tools,
+                )
+                break
+            except HTTPStatusError:
+                while len(self.messages) > 1 and self.messages[-1].role == "assistant":
+                    # why 1? because we need to keep at least one user message in the exchange
+                    self.pop_last_message()
+                num_times_attempted += 1
+
+        if num_times_attempted == 3:
+            # we failed to generate a response after three attempts
+            raise Exception("Failed to generate the next message.", 500)
 
         self.add(message)
         self.add_checkpoints_from_usage(usage)  # this has to come after adding the response

@@ -679,3 +679,19 @@ def test_prepend_checkpointed_message_empty_exchange(normal_exchange):
     assert len(ex.checkpoint_data.checkpoints) == 3
     assert len(ex.messages) == 3
     assert_no_overlapping_checkpoints(ex)
+
+
+def test_generate_successful_response_on_first_try(normal_exchange):
+    ex = normal_exchange
+    ex.add(Message(role="user", content=[Text("Hello")]))
+    ex.generate()
+
+
+def test_generate_http_error_recovery():
+    # TODO
+    pass
+
+
+def test_generate_http_error_no_recovery():
+    # TODO
+    pass
