@@ -1,5 +1,7 @@
 from typing import List, Tuple
+from unittest.mock import Mock
 
+from httpx import HTTPStatusError
 import pytest
 
 from exchange.checkpoint import Checkpoint, CheckpointData
@@ -679,3 +681,75 @@ def test_prepend_checkpointed_message_empty_exchange(normal_exchange):
     assert len(ex.checkpoint_data.checkpoints) == 3
     assert len(ex.messages) == 3
     assert_no_overlapping_checkpoints(ex)
+
+
+def test_generate_successful_response_on_first_try(normal_exchange):
+    ex = normal_exchange
+    ex.add(Message(role="user", content=[Text("Hello")]))
+    ex.generate()
+
+
+class MockErrorProvider(Provider):
+    def __init__(self, sequence: List[Message | Exception]):
+        self.sequence = sequence
+        self.call_count = 0
+
+    def complete(self, model: str, system: str, messages: List[Message], tools: List[Tool]) -> Message:
+        next_item = self.sequence[self.call_count]
+        if self.call_count != len(self.sequence) - 1:
+            self.call_count += 1
+        if isinstance(next_item, Exception):
+            raise HTTPStatusError("Bad Request", request=Mock(), response=Mock())
+        return next_item, Usage(input_tokens=10, output_tokens=10, total_tokens=20)
+
+
+def test_generate_http_error_recovery_empty_messages():
+    ex = Exchange(
+        provider=MockErrorProvider(
+            sequence=[Message.assistant("Some text"), Exception(), Message.assistant("Some other text")]
+        ),
+        model="gpt-4o-2024-05-13",
+        system="You are a helpful assistant.",
+        moderator=PassiveModerator(),
+    )
+    ex.add(Message.user("Hello"))
+    ex.generate()
+    ex.add(Message.user("Hello again!"))
+    ex.generate()
+
+
+def test_generate_http_error_changes_messages():
+    ex = Exchange(
+        provider=MockErrorProvider(
+            sequence=[
+                Message(role="assistant", content=[ToolUse(id="1", name="dishwasher", parameters={})]),
+                Exception(),
+                Message.assistant("I'm done cleaning the dishes."),
+            ]
+        ),
+        model="gpt-4o-2024-05-13",
+        system="You are a helpful assistant.",
+        moderator=PassiveModerator(),
+    )
+    ex.add(Message.user("Hi! Can you clean the dishes for me?"))
+    ex.generate()
+    ex.add(Message(role="user", content=[ToolResult(tool_use_id="1", output="I cleaned the dishes.")]))
+    ex.generate()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert ex.messages[0].text == "Hi! Can you clean the dishes for me?"
+    assert ex.messages[1].text == "I'm done cleaning the dishes."
+
+
+def test_generate_http_error_no_recovery():
+    ex = Exchange(
+        provider=MockErrorProvider(sequence=[Exception()]),
+        model="gpt-4o-2024-05-13",
+        system="You are a helpful assistant.",
+        moderator=PassiveModerator(),
+    )
+    ex.add(Message(role="user", content=[Text("Hello")]))
+    with pytest.raises(Exception) as e:
+        ex.generate()
+    assert str(e.value) == "Failed to generate the next message."

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.4] - 2024-09-02
+
+- Catch any HTTP errors the provider emits and retry the call to `generate` with different messages
+
 ## [0.8.3] - 2024-09-02
 
 - Refactor checkpoints to allow exchange to stay in-sync across messages and checkpoints
