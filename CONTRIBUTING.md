@@ -34,7 +34,12 @@ uv run pytest tests -m integration
 # or `just integration` 
 ```
 
+## Pull Requests
+
+When opening a pull request, please ensure that your PR title adheres to the [Conventional Commits specification](https://www.conventionalcommits.org/).
+This helps us maintain a consistent and meaningful changelog.
 
 [uv]: https://docs.astral.sh/uv/
 [ruff]: https://docs.astral.sh/ruff/
 [just]: https://github.com/casey/just
+
