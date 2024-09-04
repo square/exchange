@@ -17,8 +17,9 @@ from exchange.tool import Tool
 
 OLLAMA_HOST = "http://localhost:11434/"
 
+
 #
-# NOTE: this is experimental, best used with 70B model or larger if you can. 
+# NOTE: this is experimental, best used with 70B model or larger if you can.
 # Example profile config to try:
 class OllamaProvider(Provider):
     """Provides chat completions for models hosted by Ollama"""
@@ -33,10 +34,10 @@ class OllamaProvider(Provider):
           toolkits:
           - name: developer
             requires: {}
-    """    
+    """
 
     def __init__(self, client: httpx.Client) -> None:
-        print('PLEASE NOTE: the ollama provider is experimental, use with care')
+        print("PLEASE NOTE: the ollama provider is experimental, use with care")
         super().__init__()
         self.client = client
 

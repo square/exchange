@@ -1,9 +1,14 @@
-from typing import List, Optional, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List
 
 from exchange.checkpoint import CheckpointData
 from exchange.message import Message
 from exchange.moderators import PassiveModerator
 from exchange.moderators.base import Moderator
+
+if TYPE_CHECKING:
+    from exchange.exchange import Exchange
 
 # currently this is the point at which we start to truncate, so
 # so once we get to this token size the token count will exceed this
@@ -15,15 +20,15 @@ MAX_TOKENS = 100000
 class ContextTruncate(Moderator):
     def __init__(
         self,
-        model: Optional[str] = "gpt-4o-mini",
-        max_tokens: Optional[int] = MAX_TOKENS,
+        model: str = "gpt-4o-mini",
+        max_tokens: int = MAX_TOKENS,
     ) -> None:
         self.model = model
         self.system_prompt_token_count = 0
         self.max_tokens = max_tokens
         self.last_system_prompt = None
 
-    def rewrite(self, exchange: Type["exchange.exchange.Exchange"]) -> None:
+    def rewrite(self, exchange: Exchange) -> None:
         """Truncate the exchange messages with a FIFO strategy."""
         self._update_system_prompt_token_count(exchange)
 
@@ -34,7 +39,7 @@ class ContextTruncate(Moderator):
         for _ in range(len(messages_to_remove)):
             exchange.pop_first_message()
 
-    def _update_system_prompt_token_count(self, exchange: Type["exchange.exchange.Exchange"]) -> None:
+    def _update_system_prompt_token_count(self, exchange: Exchange) -> None:
         is_different_system_prompt = False
         if self.last_system_prompt != exchange.system:
             is_different_system_prompt = True
@@ -55,7 +60,7 @@ class ContextTruncate(Moderator):
             exchange.checkpoint_data.total_token_count -= last_system_prompt_token_count
             exchange.checkpoint_data.total_token_count += self.system_prompt_token_count
 
-    def _get_messages_to_remove(self, exchange: Type["exchange.exchange.Exchange"]) -> List[Message]:
+    def _get_messages_to_remove(self, exchange: Exchange) -> List[Message]:
         # this keeps all the messages/checkpoints
         throwaway_exchange = exchange.replace(
             moderator=PassiveModerator(),

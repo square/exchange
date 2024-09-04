@@ -6,11 +6,12 @@ from httpx import HTTPStatusError, Response
 
 
 def retry_with_backoff(
-        should_retry: Callable, 
-        max_retries: Optional[int] = 5, 
-        initial_wait: Optional[float] = 10, 
-        backoff_factor: Optional[float] = 1, 
-        handle_retry_exhausted: Optional[Callable] = None) ->  Callable:
+    should_retry: Callable,
+    max_retries: Optional[int] = 5,
+    initial_wait: Optional[float] = 10,
+    backoff_factor: Optional[float] = 1,
+    handle_retry_exhausted: Optional[Callable] = None,
+) -> Callable:
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args: List, **kwargs: Dict) -> Any:  # noqa: ANN401
@@ -21,13 +22,16 @@ def retry_with_backoff(
                     return result
                 if (retry + 1) == max_retries:
                     break
-                sleep_time = initial_wait + (backoff_factor * (2 ** retry))
+                sleep_time = initial_wait + (backoff_factor * (2**retry))
                 time.sleep(sleep_time)
             if handle_retry_exhausted:
                 handle_retry_exhausted(result, max_retries)
             return result
+
         return wrapper
+
     return decorator
+
 
 def retry_httpx_request(
     retry_on_status_code: Optional[Iterable[int]] = None,
@@ -37,6 +41,7 @@ def retry_httpx_request(
 ) -> Callable:
     if retry_on_status_code is None:
         retry_on_status_code = set(range(401, 999))
+
     def should_retry(response: Response) -> bool:
         return response.status_code in retry_on_status_code
 
@@ -52,5 +57,5 @@ def retry_httpx_request(
         initial_wait=initial_wait,
         backoff_factor=backoff_factor,
         should_retry=should_retry,
-        handle_retry_exhausted=handle_retry_exhausted  
+        handle_retry_exhausted=handle_retry_exhausted,
     )

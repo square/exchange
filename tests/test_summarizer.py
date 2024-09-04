@@ -16,7 +16,11 @@ class MockProvider:
         else:
             message = Message.assistant(assistant_message_text)
         total_tokens = total_input_tokens + output_tokens
-        usage = Usage(input_tokens=total_input_tokens, output_tokens=output_tokens, total_tokens=total_tokens)
+        usage = Usage(
+            input_tokens=total_input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+        )
         return message, usage
 
 
@@ -82,26 +86,50 @@ MESSAGE_SEQUENCE = [
     Message.user("I need help with math problems."),
     Message.assistant("Sure, I can help with that. Let's get started."),
     Message.user("What is 2 + 2, 3*3, 9/5, 2*20, 14/2?"),
-    Message(role="assistant", content=[ToolUse(id="1", name="add", parameters={"a": 2, "b": 2})]),
+    Message(
+        role="assistant",
+        content=[ToolUse(id="1", name="add", parameters={"a": 2, "b": 2})],
+    ),
     Message(role="user", content=[ToolResult(tool_use_id="1", output="4")]),
-    Message(role="assistant", content=[ToolUse(id="2", name="multiply", parameters={"a": 3, "b": 3})]),
+    Message(
+        role="assistant",
+        content=[ToolUse(id="2", name="multiply", parameters={"a": 3, "b": 3})],
+    ),
     Message(role="user", content=[ToolResult(tool_use_id="2", output="9")]),
-    Message(role="assistant", content=[ToolUse(id="3", name="divide", parameters={"a": 9, "b": 5})]),
+    Message(
+        role="assistant",
+        content=[ToolUse(id="3", name="divide", parameters={"a": 9, "b": 5})],
+    ),
     Message(role="user", content=[ToolResult(tool_use_id="3", output="1.8")]),
-    Message(role="assistant", content=[ToolUse(id="4", name="multiply", parameters={"a": 2, "b": 20})]),
+    Message(
+        role="assistant",
+        content=[ToolUse(id="4", name="multiply", parameters={"a": 2, "b": 20})],
+    ),
     Message(role="user", content=[ToolResult(tool_use_id="4", output="40")]),
-    Message(role="assistant", content=[ToolUse(id="5", name="divide", parameters={"a": 14, "b": 2})]),
+    Message(
+        role="assistant",
+        content=[ToolUse(id="5", name="divide", parameters={"a": 14, "b": 2})],
+    ),
     Message(role="user", content=[ToolResult(tool_use_id="5", output="7")]),
     Message.assistant("I'm done calculating the answers to your math questions."),
     Message.user("Can you also help with my science homework?"),
     Message.assistant("Yes, I can help with science too."),
     Message.user("What is the speed of light? The frequency of a photon? The mass of an electron?"),
-    Message(role="assistant", content=[ToolUse(id="6", name="speed_of_light", parameters={})]),
+    Message(
+        role="assistant",
+        content=[ToolUse(id="6", name="speed_of_light", parameters={})],
+    ),
     Message(role="user", content=[ToolResult(tool_use_id="6", output="299,792,458 m/s")]),
-    Message(role="assistant", content=[ToolUse(id="7", name="photon_frequency", parameters={})]),
+    Message(
+        role="assistant",
+        content=[ToolUse(id="7", name="photon_frequency", parameters={})],
+    ),
     Message(role="user", content=[ToolResult(tool_use_id="7", output="2.418 x 10^14 Hz")]),
     Message(role="assistant", content=[ToolUse(id="8", name="electron_mass", parameters={})]),
-    Message(role="user", content=[ToolResult(tool_use_id="8", output="9.10938356 x 10^-31 kg")]),
+    Message(
+        role="user",
+        content=[ToolResult(tool_use_id="8", output="9.10938356 x 10^-31 kg")],
+    ),
     Message.assistant("I'm done calculating the answers to your science questions."),
     Message.user("That's great! How about history?"),
     Message.assistant("Of course, I can help with history as well."),
@@ -118,8 +146,8 @@ class AnotherMockProvider:
         self.summarized_count = 0
 
     def complete(self, model, system, messages, tools):
-        SYSTEM_PROMPT_TOKENS = 100
-        input_token_count = SYSTEM_PROMPT_TOKENS
+        system_prompt_tokens = 100
+        input_token_count = system_prompt_tokens
 
         message = self.sequence[self.current_index]
         if self.summarize_next:
@@ -138,7 +166,7 @@ class AnotherMockProvider:
 
         if len(messages) == 0:
             return Message.assistant("Getting system prompt size"), Usage(
-                input_tokens=80, output_tokens=20, total_tokens=SYSTEM_PROMPT_TOKENS
+                input_tokens=80, output_tokens=20, total_tokens=system_prompt_tokens
             )
 
         for i in range(len(messages)):
@@ -155,7 +183,11 @@ class AnotherMockProvider:
         total_tokens = input_token_count + output_tokens
         if total_tokens > 300:
             self.summarize_next = True
-        usage = Usage(input_tokens=input_token_count, output_tokens=output_tokens, total_tokens=total_tokens)
+        usage = Usage(
+            input_tokens=input_token_count,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+        )
         self.current_index += 2
         return message, usage
 

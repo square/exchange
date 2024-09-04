@@ -219,7 +219,7 @@ class BedrockProvider(Provider):
         return self.response_to_message(response_message), usage
 
     @retry_httpx_request()
-    def _send_request(self, payload: Any, path:str) -> httpx.Response:  # noqa: ANN401
+    def _send_request(self, payload: Any, path: str) -> httpx.Response:  # noqa: ANN401
         return self.client.post(path, json=payload)
 
     @staticmethod
