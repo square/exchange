@@ -45,7 +45,7 @@ class AwsClient(httpx.Client):
             payload=json,
             service="bedrock",
         )
-        return super().post(url=path, headers=signed_headers, **kwargs)
+        return super().post(url=path, json=json, headers=signed_headers, **kwargs)
 
     def sign_and_get_headers(
         self,
@@ -122,7 +122,7 @@ class AwsClient(httpx.Client):
 
         # Add signing information to the request
         authorization_header = (
-            f"{algorithm} Credential={self.access_key}/{credential_scope}, SignedHeaders={signed_headers},"
+            f"{algorithm} Credential={self.access_key}/{credential_scope}, SignedHeaders={signed_headers}, "
             f"Signature={signature}"
         )
 
@@ -203,8 +203,7 @@ class BedrockProvider(Provider):
         )
         payload = {k: v for k, v in payload.items() if v}
 
-        path = f"model/{model}/converse"
-
+        path = f"{self.client.host}model/{model}/converse"
         response = self._send_request(payload, path)
         raise_for_status(response)
         response_message = response.json()["output"]["message"]
