@@ -36,7 +36,7 @@ class AwsClient(httpx.Client):
         self.access_key = aws_access_key
         self.secret_key = aws_secret_key
         self.session_token = aws_session_token
-        super().__init__(base_url=self.host, **kwargs)
+        super().__init__(base_url=self.host, timeout=30, **kwargs)
 
     def post(self, path: str, json: Dict, **kwargs: Dict[str, Any]) -> httpx.Response:
         signed_headers = self.sign_and_get_headers(
