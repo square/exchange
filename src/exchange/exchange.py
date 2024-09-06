@@ -14,7 +14,7 @@ from exchange.moderators import Moderator
 from exchange.moderators.truncate import ContextTruncate
 from exchange.providers import Provider, Usage
 from exchange.tool import Tool
-from exchange.usage_collector import UsageCollector
+from exchange.token_usage_collector import TokenUsageCollector
 
 FAILED_TO_GENERATE_MSG = "Failed to generate the next message."
 
@@ -50,7 +50,7 @@ class Exchange:
     tools: Tuple[Tool] = field(factory=tuple, converter=tuple)
     messages: List[Message] = field(factory=list)
     checkpoint_data: CheckpointData = field(factory=CheckpointData)
-    usage_collector: UsageCollector = field(factory=UsageCollector)
+    token_usage_collector: TokenUsageCollector = field(factory=TokenUsageCollector)
 
     @property
     def _toolmap(self) -> Mapping[str, Tool]:
@@ -121,8 +121,8 @@ class Exchange:
         # self.moderator.rewrite(self)
 
         total_tokens = usage.total_tokens if usage.total_tokens is not None else 0
-        if self.usage_collector and total_tokens > 0:
-            self.usage_collector.collect(self.model, usage)
+        if self.token_usage_collector and total_tokens > 0:
+            self.token_usage_collector.collect(self.model, usage)
         return message
 
     def reply(self, max_tool_use: int = 128) -> Message:

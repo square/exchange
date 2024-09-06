@@ -5,7 +5,7 @@ from typing import Dict
 from exchange.providers.base import Usage
 
 
-class UsageCollector:
+class TokenUsageCollector:
     def __init__(self) -> None:
         # use thread-safe queue to store usage data from multiple threads
         # as data may be collected from multiple threads
