@@ -8,11 +8,6 @@ from exchange.providers import Provider, Usage
 from exchange.tool import Tool
 
 
-def dummy_tool() -> str:
-    """An example tool"""
-    return "dummy response"
-
-
 class MockProvider(Provider):
     def complete(self, model, system, messages, tools=None):
         return Message(role="assistant", content=[Text(text="This is a mock response.")]), Usage.from_dict(
@@ -20,7 +15,7 @@ class MockProvider(Provider):
         )
 
 
-def test_exchange_immutable():
+def test_exchange_immutable(dummy_tool):
     # Create an instance of Exchange
     provider = MockProvider()
     # intentionally setting a list instead of tuple on tools, it should be converted
