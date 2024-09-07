@@ -10,7 +10,7 @@ integration *FLAGS:
   uv run pytest tests -m integration {{FLAGS}}
 
 integration-otel *FLAGS:
-  uv run dotenv run -- opentelemetry-instrument pytest tests -m integration {{FLAGS}}
+  uv run dotenv -f ./tests/otel.env run -- opentelemetry-instrument pytest tests -m integration {{FLAGS}}
 
 format:
   ruff check . --fix

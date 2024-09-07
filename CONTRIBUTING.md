@@ -49,7 +49,7 @@ otel-tui
 
 Then, trace your integration tests like this:
 ```bash
-uv run dotenv run -- opentelemetry-instrument pytest tests -m integration
+uv run dotenv -f ./tests/otel.env run -- opentelemetry-instrument pytest tests -m integration
 # or `just integration-otel` 
 ```
 
