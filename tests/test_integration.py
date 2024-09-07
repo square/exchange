@@ -3,11 +3,12 @@ from exchange.exchange import Exchange
 from exchange.message import Message
 from exchange.providers import get_provider
 from exchange.tool import Tool
+from conftest import openai_model_tool
 
 too_long_chars = "x" * (2**20 + 1)
 
 cases = [
-    (get_provider("openai"), "gpt-4o-mini"),
+    (get_provider("openai"), openai_model_tool),
     (get_provider("databricks"), "databricks-meta-llama-3-70b-instruct"),
     (get_provider("bedrock"), "anthropic.claude-3-5-sonnet-20240620-v1:0"),
 ]

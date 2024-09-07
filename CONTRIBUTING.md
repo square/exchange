@@ -19,19 +19,46 @@ uv run pytest tests -m "not integration"
 
 or, as a shortcut, 
 
-```
+```bash
 just test
 ```
 
 Generally if you are not developing a new provider, you can test most functionality through mocking and the normal
 test suite.
 
-However to ensure the providers work, we also have integration tests which actually require a credential and connect
+However, to ensure the providers work, we also have integration tests which actually require a credential and connect
 to the provider endpoints. Those can be run with
 
-```
+```bash
 uv run pytest tests -m integration
-# or `just integration` 
+# or `just integration`
+```
+
+### Integration testing OpenAI with Ollama
+
+The OpenAI provider uses the OpenAI API to access models. The OpenAI API is supported by many tools, and using this can
+save you time and money when developing. One such tool is [Ollama](https://github.com/ollama/ollama).
+
+First, run ollama and pull the models you want to test.
+```bash
+ollama serve
+# Then in another terminal
+ollama pull mistral-nemo:12B
+ollama pull llava:7b
+```
+
+Now, export OpenAI variables that control the tests
+```bash
+export OPENAI_MODEL_TOOL=mistral-nemo
+export OPENAI_MODEL_VISION=llava:7b
+export OPENAI_HOST=http://localhost:11434
+export OPENAI_API_KEY=unused
+```
+
+Finally, run openai integration tests against your ollama server.
+```bash
+uv run pytest tests -m integration -k openai
+# or `just integration -k openai`
 ```
 
 ## Pull Requests

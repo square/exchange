@@ -19,8 +19,10 @@ def validate_role_and_content(instance: "Message", *_: Any) -> None:  # noqa: AN
         if instance.tool_use:
             raise ValueError("User message does not support ToolUse")
     elif instance.role == "assistant":
-        if not (instance.text or instance.tool_use):
-            raise ValueError("Assistant message must include a Text or ToolUsage")
+        # Note: At least in llama3.1, there's no instance.text in the response
+        # when the input was a single system message. We also can't determine
+        # the input inside a validator. Hence, we can't enforce a condition
+        # that the assistant message must include a Text or ToolUsage.
         if instance.tool_result:
             raise ValueError("Assistant message does not support ToolResult")
 

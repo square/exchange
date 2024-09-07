@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 from exchange import Message, Text
 from exchange.providers.openai import OpenAiProvider
+from conftest import openai_model_tool
 
 
 @pytest.fixture
@@ -24,7 +25,7 @@ def test_openai_completion(mock_error, mock_warning, mock_sleep, mock_post, open
 
     mock_post.return_value.json.return_value = mock_response
 
-    model = "gpt-4"
+    model = openai_model_tool
     system = "You are a helpful assistant."
     messages = [Message.user("Hello")]
     tools = ()
@@ -48,7 +49,7 @@ def test_openai_completion(mock_error, mock_warning, mock_sleep, mock_post, open
 @pytest.mark.integration
 def test_openai_integration():
     provider = OpenAiProvider.from_env()
-    model = "gpt-4"  # specify a valid model
+    model = openai_model_tool
     system = "You are a helpful assistant."
     messages = [Message.user("Hello")]
 
