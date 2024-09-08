@@ -14,37 +14,8 @@ from exchange.providers.utils import (
     tools_to_openai_spec,
 )
 from exchange.tool import Tool
-from typing import Generator
 
 OPENAI_HOST = "https://api.openai.com/"
-
-
-class LogResponse(httpx.Response):
-    def iter_bytes(self, *args: object, **kwargs: Dict[str, object]) -> Generator[bytes, None, None]:
-        print("Response content:")
-        for chunk in super().iter_bytes(*args, **kwargs):
-            print(chunk.decode('utf-8'))
-            yield chunk
-
-class LogTransport(httpx.BaseTransport):
-    def __init__(self, transport: httpx.BaseTransport) -> None:
-        self.transport = transport
-
-    def handle_request(self, request: httpx.Request) -> httpx.Response:
-        # Log the request details
-        print(f"Request method: {request.method}")
-        print(f"Request URL: {request.url}")
-        print(f"Request headers: {request.headers}")
-        print(f"Request content: {request.content}")
-
-        response = self.transport.handle_request(request)
-
-        return LogResponse(
-            status_code=response.status_code,
-            headers=response.headers,
-            stream=response.stream,
-            extensions=response.extensions,
-        )
 
 
 class OpenAiProvider(Provider):
@@ -67,7 +38,6 @@ class OpenAiProvider(Provider):
             base_url=url,
             auth=("Bearer", key),
             timeout=httpx.Timeout(60 * 10),
-            transport=LogTransport(httpx.HTTPTransport()),
         )
         return cls(client)
 

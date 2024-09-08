@@ -2,11 +2,11 @@ import pytest
 from exchange.content import ToolResult, ToolUse
 from exchange.exchange import Exchange
 from exchange.message import Message
+from exchange.moderators import ContextTruncate
 from exchange.providers import get_provider
-from conftest import openai_model_vision
 
 cases = [
-    (get_provider("openai"), openai_model_vision),
+    (get_provider("openai"), "gpt-4o-mini"),
 ]
 
 
@@ -18,6 +18,7 @@ def test_simple(provider, model):
     ex = Exchange(
         provider=provider,
         model=model,
+        moderator=ContextTruncate(model),
         system="You are a helpful assistant.",
     )
 

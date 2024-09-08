@@ -45,15 +45,10 @@ class Exchange:
     provider: Provider
     model: str
     system: str
-    moderator: Moderator = field(default=None)
+    moderator: Moderator = field(default=ContextTruncate())
     tools: Tuple[Tool] = field(factory=tuple, converter=tuple)
     messages: List[Message] = field(factory=list)
     checkpoint_data: CheckpointData = field(factory=CheckpointData)
-
-    def __attrs_post_init__(self) -> None:
-        """Ensures context truncation uses the same model as the exchange"""
-        if self.moderator is None:
-            object.__setattr__(self, "moderator", ContextTruncate(model=self.model))
 
     @property
     def _toolmap(self) -> Mapping[str, Tool]:

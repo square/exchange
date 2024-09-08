@@ -34,31 +34,22 @@ uv run pytest tests -m integration
 # or `just integration`
 ```
 
-### Integration testing OpenAI with Ollama
+### Integration testing with Ollama
 
-The OpenAI provider uses the OpenAI API to access models. The OpenAI API is supported by many tools, and using this can
-save you time and money when developing. One such tool is [Ollama](https://github.com/ollama/ollama).
+To run integration tests against Ollama, you need the model that tests expect available locally.
 
 First, run ollama and pull the models you want to test.
 ```bash
 ollama serve
-# Then in another terminal
-ollama pull mistral-nemo:12B
-ollama pull llava:7b
+# Then in another terminal, pull the model
+OLLAMA_MODEL=$(uv run python -c "from src.exchange.providers.ollama import OLLAMA_MODEL; print(OLLAMA_MODEL)")
+ollama pull $OLLAMA_MODEL
 ```
 
-Now, export OpenAI variables that control the tests
+Finally, run ollama integration tests.
 ```bash
-export OPENAI_MODEL_TOOL=mistral-nemo
-export OPENAI_MODEL_VISION=llava:7b
-export OPENAI_HOST=http://localhost:11434
-export OPENAI_API_KEY=unused
-```
-
-Finally, run openai integration tests against your ollama server.
-```bash
-uv run pytest tests -m integration -k openai
-# or `just integration -k openai`
+uv run pytest tests -m integration -k ollama
+# or `just integration -k ollama`
 ```
 
 ## Pull Requests
