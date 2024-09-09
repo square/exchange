@@ -164,7 +164,7 @@ class AnotherMockProvider:
         if len(messages) > 0 and type(messages[0].content[0]) is ToolResult:
             raise ValueError("ToolResult should not be the first message")
 
-        if len(messages) == 0:
+        if len(messages) == 1 and messages[0].text == "a":
             return Message.assistant("Getting system prompt size"), Usage(
                 input_tokens=80, output_tokens=20, total_tokens=system_prompt_tokens
             )
