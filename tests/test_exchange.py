@@ -689,9 +689,9 @@ def test_generate_successful_response_on_first_try(normal_exchange):
     ex.generate()
 
 
-def test_rewind_to_last_user_message_in_normal_exchange(normal_exchange):
+def test_rewind_in_normal_exchange(normal_exchange):
     ex = normal_exchange
-    ex.rewind_to_last_user_message()
+    ex.rewind()
 
     assert len(ex.messages) == 0
     assert len(ex.checkpoint_data.checkpoints) == 0
@@ -701,7 +701,7 @@ def test_rewind_to_last_user_message_in_normal_exchange(normal_exchange):
     ex.add(Message(role="user", content=[Text("Hello")]))
 
     # testing if it works with a user text message at the end
-    ex.rewind_to_last_user_message()
+    ex.rewind()
 
     assert len(ex.messages) == 2
     assert len(ex.checkpoint_data.checkpoints) == 2
@@ -710,7 +710,54 @@ def test_rewind_to_last_user_message_in_normal_exchange(normal_exchange):
     ex.generate()
 
     # testing if it works with a non-user text message at the end
-    ex.rewind_to_last_user_message()
+    ex.rewind()
 
     assert len(ex.messages) == 2
     assert len(ex.checkpoint_data.checkpoints) == 2
+
+
+def test_rewind_with_tool_usage():
+    # simulating a real exchange with tool usage
+    ex = Exchange(
+        provider=MockProvider(
+            sequence=[
+                Message.assistant("Hello!"),
+                Message(
+                    role="assistant",
+                    content=[ToolUse(id="1", name="dummy_tool", parameters={})],
+                ),
+                Message(
+                    role="assistant",
+                    content=[ToolUse(id="2", name="dummy_tool", parameters={})],
+                ),
+                Message.assistant("Done!"),
+            ],
+            usage_dicts=[
+                {"usage": {"input_tokens": 12, "output_tokens": 23}},
+                {"usage": {"input_tokens": 27, "output_tokens": 44}},
+                {"usage": {"input_tokens": 50, "output_tokens": 56}},
+                {"usage": {"input_tokens": 60, "output_tokens": 76}},
+            ],
+        ),
+        model="gpt-4o-2024-05-13",
+        system="You are a helpful assistant.",
+        tools=[Tool.from_function(dummy_tool)],
+        moderator=PassiveModerator(),
+    )
+    ex.add(Message(role="user", content=[Text(text="test")]))
+    ex.reply()
+    ex.add(Message(role="user", content=[Text(text="kick it off!")]))
+    ex.reply()
+
+    # removing the last message to simulate not getting a response
+    ex.pop_last_message()
+
+    # calling rewind to last user message
+    ex.rewind()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert_no_overlapping_checkpoints(ex)
+    assert ex.messages[0].content[0].text == "test"
+    assert type(ex.messages[1].content[0]) == Text
+    assert ex.messages[1].role == "assistant"

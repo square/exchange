@@ -80,17 +80,12 @@ class Exchange:
     def generate(self) -> Message:
         """Generate the next message."""
         self.moderator.rewrite(self)
-        try:
-            message, usage = self.provider.complete(
-                self.model,
-                self.system,
-                messages=self.messages,
-                tools=self.tools,
-            )
-        except HTTPStatusError as e:
-            # in the future, if models are hosted on machines we may need to add
-            # other types of exceptions here
-            raise FailedToGenerateMessageError(f"Failed to generate message: {e}") from e
+        message, usage = self.provider.complete(
+            self.model,
+            self.system,
+            messages=self.messages,
+            tools=self.tools,
+        )
         self.add(message)
         self.add_checkpoints_from_usage(usage)  # this has to come after adding the response
 
@@ -319,7 +314,7 @@ class Exchange:
         )
         self.checkpoint_data.message_index_offset = new_index
 
-    def rewind_to_last_user_message(self) -> None:
+    def rewind(self) -> None:
         if not self.messages:
             return
 
