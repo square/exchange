@@ -47,7 +47,7 @@ def test_tools(provider, model, tmp_path):
         Returns:
             str: The contents of the file.
         """
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             return file.read()
 
     # Create a temporary file with the contents "hello exchange"
