@@ -759,5 +759,5 @@ def test_rewind_with_tool_usage():
     assert len(ex.checkpoint_data.checkpoints) == 2
     assert no_overlapping_checkpoints(ex)
     assert ex.messages[0].content[0].text == "test"
-    assert type(ex.messages[1].content[0]) == Text
+    assert type(ex.messages[1].content[0]) is Text
     assert ex.messages[1].role == "assistant"

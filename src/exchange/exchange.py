@@ -318,7 +318,7 @@ class Exchange:
             return
 
         # we remove messages until we find the last user text message
-        while not (self.messages[-1].role == "user" and type(self.messages[-1].content[-1]) == Text):
+        while not (self.messages[-1].role == "user" and type(self.messages[-1].content[-1]) is Text):
             self.pop_last_message()
 
         # now we remove that last user text message, putting us at a good point
