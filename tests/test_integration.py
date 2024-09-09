@@ -1,12 +1,15 @@
 import pytest
 from exchange.exchange import Exchange
 from exchange.message import Message
+from exchange.moderators import ContextTruncate
 from exchange.providers import get_provider
+from exchange.providers.ollama import OLLAMA_MODEL
 from exchange.tool import Tool
 
 too_long_chars = "x" * (2**20 + 1)
 
 cases = [
+    (get_provider("ollama"), OLLAMA_MODEL),
     (get_provider("openai"), "gpt-4o-mini"),
     (get_provider("databricks"), "databricks-meta-llama-3-70b-instruct"),
     (get_provider("bedrock"), "anthropic.claude-3-5-sonnet-20240620-v1:0"),
@@ -21,6 +24,7 @@ def test_simple(provider, model):
     ex = Exchange(
         provider=provider,
         model=model,
+        moderator=ContextTruncate(model),
         system="You are a helpful assistant.",
     )
 
@@ -61,7 +65,7 @@ def test_tools(provider, model, tmp_path):
         tools=(Tool.from_function(read_file),),
     )
 
-    ex.add(Message.user(f"Can you read the contents of this file: {temp_file}"))
+    ex.add(Message.user(f"What are the contents of this file? {temp_file}"))
 
     response = ex.reply()
 
@@ -80,6 +84,7 @@ def test_tool_use_output_chars(provider, model):
     ex = Exchange(
         provider=provider,
         model=model,
+        moderator=ContextTruncate(model),
         system="You are a helpful assistant. Expect to need to authenticate using get_password.",
         tools=(Tool.from_function(get_password),),
     )
