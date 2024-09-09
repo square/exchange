@@ -4,7 +4,6 @@ from copy import deepcopy
 from typing import Any, Dict, List, Mapping, Tuple
 
 from attrs import define, evolve, field
-from httpx import HTTPStatusError
 from tiktoken import get_encoding
 
 from exchange.checkpoint import Checkpoint, CheckpointData

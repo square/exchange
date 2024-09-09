@@ -1,7 +1,5 @@
 from typing import List, Tuple
-from unittest.mock import Mock
 
-from httpx import HTTPStatusError
 import pytest
 
 from exchange.checkpoint import Checkpoint, CheckpointData
