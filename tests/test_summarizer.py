@@ -165,8 +165,9 @@ class AnotherMockProvider:
             raise ValueError("ToolResult should not be the first message")
 
         if len(messages) == 1 and messages[0].text == "a":
+            # adding a +1 for the "a"
             return Message.assistant("Getting system prompt size"), Usage(
-                input_tokens=80, output_tokens=20, total_tokens=system_prompt_tokens
+                input_tokens=80 + 1, output_tokens=20, total_tokens=system_prompt_tokens + 1
             )
 
         for i in range(len(messages)):
@@ -223,3 +224,4 @@ def test_summarizer_generic_conversation(conversation_exchange_instance: Exchang
     assert checkpoints[-1].end_index == 29
     assert conversation_exchange_instance.checkpoint_data.message_index_offset == 20
     assert conversation_exchange_instance.provider.summarized_count == 12
+    assert conversation_exchange_instance.moderator.system_prompt_token_count == 100

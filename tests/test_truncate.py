@@ -82,8 +82,9 @@ class TruncateLinearProvider(Provider):
             raise ValueError("ToolResult should not be the first message")
 
         if len(messages) == 1 and messages[0].text == "a":
+            # adding a +1 for the "a"
             return Message.assistant("Getting system prompt size"), Usage(
-                input_tokens=80, output_tokens=20, total_tokens=SYSTEM_PROMPT_TOKENS
+                input_tokens=80 + 1, output_tokens=20, total_tokens=SYSTEM_PROMPT_TOKENS + 1
             )
 
         for i in range(len(messages)):
@@ -128,3 +129,4 @@ def test_truncate_on_generic_conversation(conversation_exchange_instance: Exchan
             i += 2
         # ensure the total token count is not anything exhorbitant
         assert conversation_exchange_instance.checkpoint_data.total_token_count < 700
+        assert conversation_exchange_instance.moderator.system_prompt_token_count == 100
