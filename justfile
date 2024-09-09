@@ -23,8 +23,6 @@ release version:
   git co -b release-version-{{version}}
   git add .
   git commit -m "chore(release): release version {{version}}"
-  git push 
-  git cmp
 
 tag:
   current_version=`grep 'version' pyproject.toml | cut -d '"' -f 2`
