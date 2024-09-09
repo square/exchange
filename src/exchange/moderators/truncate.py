@@ -20,7 +20,7 @@ MAX_TOKENS = 100000
 class ContextTruncate(Moderator):
     def __init__(
         self,
-        model: str = "gpt-4o-mini",
+        model: str = None,
         max_tokens: int = MAX_TOKENS,
     ) -> None:
         self.model = model
