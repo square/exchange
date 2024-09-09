@@ -4,21 +4,15 @@ from copy import deepcopy
 from typing import Any, Dict, List, Mapping, Tuple
 
 from attrs import define, evolve, field
-from httpx import HTTPStatusError
 from tiktoken import get_encoding
 
 from exchange.checkpoint import Checkpoint, CheckpointData
-from exchange.content import ToolResult, ToolUse
+from exchange.content import Text, ToolResult, ToolUse
 from exchange.message import Message
 from exchange.moderators import Moderator
 from exchange.moderators.truncate import ContextTruncate
 from exchange.providers import Provider, Usage
 from exchange.tool import Tool
-
-FAILED_TO_GENERATE_MSG = "Failed to generate the next message."
-
-# TODO: decide on the correct number of retries here
-REMOVE_MESSAGE_RETRY_TIMES = 3
 
 
 def validate_tool_output(output: str) -> None:
@@ -77,38 +71,12 @@ class Exchange:
     def generate(self) -> Message:
         """Generate the next message."""
         self.moderator.rewrite(self)
-
-        num_times_attempted = 0
-        while num_times_attempted < 3:
-            # we will attempt to generate a response with retries a few times.
-            # if we run into an HTTP error, we will pop the last message until the last
-            # message is a user text message, and then try again. we will do this three
-            # times before giving up.
-            # providers that are hosted on your own machine should not throw HTTP errors,
-            # and could instead configure their own behavior by throwing a different type
-            # of error.
-            try:
-                message, usage = self.provider.complete(
-                    self.model,
-                    self.system,
-                    messages=self.messages,
-                    tools=self.tools,
-                )
-                break
-            except HTTPStatusError:
-                if len(self.messages) <= 1:
-                    # we can't pop any messages, so we have to give up
-                    raise Exception(FAILED_TO_GENERATE_MSG)
-                self.pop_last_message()
-                while len(self.messages) > 1 and self.messages[-1].role == "assistant":
-                    # why 1? because we need to keep at least one user message in the exchange
-                    self.pop_last_message()
-                num_times_attempted += 1
-
-        if num_times_attempted >= REMOVE_MESSAGE_RETRY_TIMES:
-            # we failed to generate a response after three attempts
-            raise Exception(FAILED_TO_GENERATE_MSG)
-
+        message, usage = self.provider.complete(
+            self.model,
+            self.system,
+            messages=self.messages,
+            tools=self.tools,
+        )
         self.add(message)
         self.add_checkpoints_from_usage(usage)  # this has to come after adding the response
 
@@ -336,6 +304,19 @@ class Exchange:
             ),
         )
         self.checkpoint_data.message_index_offset = new_index
+
+    def rewind(self) -> None:
+        if not self.messages:
+            return
+
+        # we remove messages until we find the last user text message
+        while not (self.messages[-1].role == "user" and type(self.messages[-1].content[-1]) is Text):
+            self.pop_last_message()
+
+        # now we remove that last user text message, putting us at a good point
+        # to ask the user for their input again
+        if self.messages:
+            self.pop_last_message()
 
     @property
     def is_allowed_to_call_llm(self) -> bool:

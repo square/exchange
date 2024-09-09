@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from exchange.checkpoint import CheckpointData
 from exchange.message import Message
@@ -20,7 +20,7 @@ MAX_TOKENS = 100000
 class ContextTruncate(Moderator):
     def __init__(
         self,
-        model: str = None,
+        model: Optional[str] = None,
         max_tokens: int = MAX_TOKENS,
     ) -> None:
         self.model = model
@@ -47,15 +47,17 @@ class ContextTruncate(Moderator):
 
         if not self.system_prompt_token_count or is_different_system_prompt:
             # calculate the system prompt tokens (includes functions etc...)
+            # we use a placeholder message with one token, which we subtract later
+            # this ensures compatibility with providers that require a user message
             _system_token_exchange = exchange.replace(
-                messages=[],
+                messages=[Message.user("a")],
                 checkpoint_data=CheckpointData(),
                 moderator=PassiveModerator(),
                 model=self.model if self.model else exchange.model,
             )
             _system_token_exchange.generate()
             last_system_prompt_token_count = self.system_prompt_token_count
-            self.system_prompt_token_count = _system_token_exchange.checkpoint_data.total_token_count
+            self.system_prompt_token_count = _system_token_exchange.checkpoint_data.total_token_count - 1
 
             exchange.checkpoint_data.total_token_count -= last_system_prompt_token_count
             exchange.checkpoint_data.total_token_count += self.system_prompt_token_count
@@ -66,15 +68,15 @@ class ContextTruncate(Moderator):
             moderator=PassiveModerator(),
         )
 
-        # get the messages that we want to summarize
-        messages_to_summarize = []
+        # get the messages that we want to remove
+        messages_to_remove = []
         while throwaway_exchange.checkpoint_data.total_token_count > self.max_tokens:
             _, messages = throwaway_exchange.pop_first_checkpoint()
-            messages_to_summarize.extend(messages)
+            messages_to_remove.extend(messages)
 
         while len(throwaway_exchange.messages) > 0 and throwaway_exchange.messages[0].tool_result:
             # we would need a corresponding tool use once we resume, so we pop this one off too
             # and summarize it as well
             _, messages = throwaway_exchange.pop_first_checkpoint()
-            messages_to_summarize.extend(messages)
-        return messages_to_summarize
+            messages_to_remove.extend(messages)
+        return messages_to_remove
