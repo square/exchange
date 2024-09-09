@@ -15,14 +15,6 @@ from exchange.providers import Provider, Usage
 from exchange.tool import Tool
 
 
-class FailedToGenerateMessageError(Exception):
-    pass
-
-
-# TODO: decide on the correct number of retries here
-REMOVE_MESSAGE_RETRY_TIMES = 3
-
-
 def validate_tool_output(output: str) -> None:
     """Validate tool output for the given model"""
     max_output_chars = 2**20
