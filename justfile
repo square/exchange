@@ -26,7 +26,7 @@ release version:
 
 tag:
   current_version=`grep 'version' pyproject.toml | cut -d '"' -f 2`
-  tag_name="v${version}"
+  tag_name="v${current_version}"
   git tag ${tag_name}
 
 # this will kick of ci for release
