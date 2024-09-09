@@ -1,9 +1,9 @@
 import pytest
 from exchange import Exchange
-from exchange.message import Message
-from exchange.providers import Provider, Usage
-from exchange.moderators.truncate import ContextTruncate
 from exchange.content import ToolResult, ToolUse
+from exchange.message import Message
+from exchange.moderators.truncate import ContextTruncate
+from exchange.providers import Provider, Usage
 
 MAX_TOKENS = 300
 SYSTEM_PROMPT_TOKENS = 100
