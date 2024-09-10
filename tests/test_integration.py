@@ -51,12 +51,8 @@ def test_tools(provider, model, tmp_path):
         Returns:
             str: The contents of the file.
         """
-        with open(filename, "r") as file:
-            return file.read()
-
-    # Create a temporary file with the contents "hello exchange"
-    temp_file = tmp_path / "temp_file.txt"
-    temp_file.write_text("hello exchange")
+        assert filename == "test.txt"
+        return "hello exchange"
 
     ex = Exchange(
         provider=provider,
@@ -65,7 +61,7 @@ def test_tools(provider, model, tmp_path):
         tools=(Tool.from_function(read_file),),
     )
 
-    ex.add(Message.user(f"What are the contents of this file? {temp_file}"))
+    ex.add(Message.user("What are the contents of this file? test.txt"))
 
     response = ex.reply()
 
