@@ -37,4 +37,7 @@ Here's an example profile configuration to try:
             base_url=url,
             timeout=httpx.Timeout(60 * 10),
         )
+        # from_env is expected to fail if provider is not available
+        # so we run a quick test that the endpoint is running
+        client.get("")
         return cls(client)
