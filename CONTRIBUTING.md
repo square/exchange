@@ -51,6 +51,24 @@ Then, trace your integration tests like this:
 ```bash
 uv run dotenv -f ./tests/otel.env run -- opentelemetry-instrument pytest tests -m integration
 # or `just integration-otel` 
+
+### Integration testing with Ollama
+
+To run integration tests against Ollama, you need the model that tests expect available locally.
+
+First, run ollama and pull the models you want to test.
+```bash
+ollama serve
+# Then in another terminal, pull the model
+OLLAMA_MODEL=$(uv run python -c "from src.exchange.providers.ollama import OLLAMA_MODEL; print(OLLAMA_MODEL)")
+ollama pull $OLLAMA_MODEL
+```
+
+Finally, run ollama integration tests.
+```bash
+uv run pytest tests -m integration -k ollama
+# or `just integration -k ollama`
+
 ```
 
 Now, you can see failure details like this:

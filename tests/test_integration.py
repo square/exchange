@@ -1,12 +1,15 @@
 import pytest
 from exchange.exchange import Exchange
 from exchange.message import Message
+from exchange.moderators import ContextTruncate
 from exchange.providers import get_provider
+from exchange.providers.ollama import OLLAMA_MODEL
 from exchange.tool import Tool
 
 too_long_chars = "x" * (2**20 + 1)
 
 cases = [
+    (get_provider("ollama"), OLLAMA_MODEL),
     (get_provider("openai"), "gpt-4o-mini"),
     (get_provider("databricks"), "databricks-meta-llama-3-70b-instruct"),
     (get_provider("bedrock"), "anthropic.claude-3-5-sonnet-20240620-v1:0"),
@@ -21,6 +24,7 @@ def test_simple(provider, model):
     ex = Exchange(
         provider=provider,
         model=model,
+        moderator=ContextTruncate(model),
         system="You are a helpful assistant.",
     )
 
@@ -34,26 +38,38 @@ def test_simple(provider, model):
 
 @pytest.mark.integration  # skipped in CI/CD
 @pytest.mark.parametrize("provider,model", cases)
-def test_tools(provider, model):
+def test_tools(provider, model, tmp_path):
     provider = provider.from_env()
 
-    def get_password() -> str:
-        """Return the password for authentication"""
-        return "mellon"
+    def read_file(filename: str) -> str:
+        """
+        Read the contents of the file.
+
+        Args:
+            filename (str): The path to the file, which can be relative or absolute.
+
+        Returns:
+            str: The contents of the file.
+        """
+        with open(filename, "r") as file:
+            return file.read()
+
+    # Create a temporary file with the contents "hello exchange"
+    temp_file = tmp_path / "temp_file.txt"
+    temp_file.write_text("hello exchange")
 
     ex = Exchange(
         provider=provider,
         model=model,
-        system="You are a helpful assistant. Expect to need to authenticate using get_password.",
-        tools=(Tool.from_function(get_password),),
+        system="You are a helpful assistant. Expect to need to read a file using read_file.",
+        tools=(Tool.from_function(read_file),),
     )
 
-    ex.add(Message.user("Can you authenticate this session by responding with the password"))
+    ex.add(Message.user(f"What are the contents of this file? {temp_file}"))
 
     response = ex.reply()
 
-    # It's possible this can be flakey, but in experience so far haven't seen it
-    assert "mellon" in response.text.lower()
+    assert "hello exchange" in response.text.lower()
 
 
 @pytest.mark.integration
@@ -68,6 +84,7 @@ def test_tool_use_output_chars(provider, model):
     ex = Exchange(
         provider=provider,
         model=model,
+        moderator=ContextTruncate(model),
         system="You are a helpful assistant. Expect to need to authenticate using get_password.",
         tools=(Tool.from_function(get_password),),
     )
