@@ -5,14 +5,22 @@ import httpx
 
 from exchange.message import Message
 from exchange.providers.base import Provider, Usage
-from exchange.providers.retry_with_back_off_decorator import retry_httpx_request
+from tenacity import retry, wait_fixed, stop_after_attempt
+from exchange.providers.utils import raise_for_status, retry_if_status
 from exchange.providers.utils import (
     messages_to_openai_spec,
     openai_response_to_message,
-    raise_for_status,
     tools_to_openai_spec,
 )
 from exchange.tool import Tool
+
+
+retry_procedure = retry(
+    wait=wait_fixed(2),
+    stop=stop_after_attempt(2),
+    retry=retry_if_status(codes=[429], above=500),
+    reraise=True,
+)
 
 
 class DatabricksProvider(Provider):
@@ -80,15 +88,15 @@ class DatabricksProvider(Provider):
             **kwargs,
         )
         payload = {k: v for k, v in payload.items() if v}
-        response = self._send_request(model, payload)
-        data = raise_for_status(response).json()
-        message = openai_response_to_message(data)
-        usage = self.get_usage(data)
+        response = self._post(model, payload)
+        message = openai_response_to_message(response)
+        usage = self.get_usage(response)
         return message, usage
 
-    @retry_httpx_request()
-    def _send_request(self, model: str, payload: Any) -> httpx.Response:  # noqa: ANN401
-        return self.client.post(
+    @retry_procedure
+    def _post(self, model: str, payload: dict) -> httpx.Response:
+        response = self.client.post(
             f"serving-endpoints/{model}/invocations",
             json=payload,
         )
+        return raise_for_status(response).json()

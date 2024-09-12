@@ -1,12 +1,27 @@
 import base64
 import json
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import httpx
 from exchange.content import Text, ToolResult, ToolUse
 from exchange.message import Message
 from exchange.tool import Tool
+from tenacity import retry_if_exception
+
+
+def retry_if_status(codes: Optional[List[int]] = None, above: Optional[int] = None) -> Callable:
+    codes = codes or []
+
+    def predicate(exc: Exception) -> bool:
+        if isinstance(exc, httpx.HTTPStatusError):
+            if exc.response.status_code in codes:
+                return True
+            if above and exc.response.status_code >= above:
+                return True
+        return False
+
+    return retry_if_exception(predicate)
 
 
 def raise_for_status(response: httpx.Response) -> httpx.Response:

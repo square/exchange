@@ -5,7 +5,8 @@ import httpx
 
 from exchange.message import Message
 from exchange.providers.base import Provider, Usage
-from exchange.providers.retry_with_back_off_decorator import retry_httpx_request
+from tenacity import retry, wait_fixed, stop_after_attempt
+from exchange.providers.utils import retry_if_status
 from exchange.providers.utils import (
     messages_to_openai_spec,
     openai_response_to_message,
@@ -14,6 +15,13 @@ from exchange.providers.utils import (
     tools_to_openai_spec,
 )
 from exchange.tool import Tool
+
+retry_procedure = retry(
+    wait=wait_fixed(2),
+    stop=stop_after_attempt(2),
+    retry=retry_if_status(codes=[429], above=500),
+    reraise=True,
+)
 
 
 class AzureProvider(Provider):
@@ -91,18 +99,17 @@ class AzureProvider(Provider):
 
         payload = {k: v for k, v in payload.items() if v}
         request_url = f"{self.client.base_url}/chat/completions?api-version={self.api_version}"
-        response = self._send_request(payload, request_url)
+        response = self._post(payload, request_url)
 
         # Check for context_length_exceeded error for single, long input message
-        if "error" in response.json() and len(messages) == 1:
-            openai_single_message_context_length_exceeded(response.json()["error"])
+        if "error" in response and len(messages) == 1:
+            openai_single_message_context_length_exceeded(response["error"])
 
-        data = raise_for_status(response).json()
-
-        message = openai_response_to_message(data)
-        usage = self.get_usage(data)
+        message = openai_response_to_message(response)
+        usage = self.get_usage(response)
         return message, usage
 
-    @retry_httpx_request()
-    def _send_request(self, payload: Any, request_url: str) -> httpx.Response:  # noqa: ANN401
-        return self.client.post(request_url, json=payload)
+    @retry_procedure
+    def _post(self, payload: dict, request_url: str) -> dict:
+        response = self.client.post(request_url, json=payload)
+        return raise_for_status(response).json()
