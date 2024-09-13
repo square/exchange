@@ -90,14 +90,17 @@ class OpenAiProvider(Provider):
 
         # optionally use the reasoning model to get a better answer if tool usage isn't required.
         resoning_model = self.get_reasoning_model()
-        if resoning_model and len(self.tool_use(message)) == 0:
+        if resoning_model and len(self.tool_use(message)) == 0: # if a tool is needed we let things continue on without extra reasoning.
             # will limit its invocation to non trivial things for now
-            filtered_messages = self.messages_filtered(messages)            
-            if len(filtered_messages[-1]['content']) > 50 and len(data["choices"][0]["message"]["content"]) > 100:                
+            filtered_messages = self.messages_filtered(messages)
+            latest_message =  filtered_messages[-1]
+            latest_completion = data["choices"][0]["message"]["content"]
+            if len(latest_message['content']) > 50 and len(latest_completion) > 100:                
                 print("---> using deep reasoning")
                 payload = dict(
                     messages=[                        
                         *filtered_messages,
+                        {"role": "user", "content": "TASK: please check the answer that follows, if it is ok then return it, otherwise rewrite it and return it:" + latest_completion},
                     ],
                     model=resoning_model,
                     **kwargs,
