@@ -66,7 +66,7 @@ class OpenAiProvider(Provider):
         messages: List[Message],
         tools: Tuple[Tool],
         **kwargs: Dict[str, Any],
-    ) -> Tuple[Message, Usage]:
+    ) -> Tuple[Message, Usage]:        
         payload = dict(
             messages=[
                 {"role": "system", "content": system},
@@ -79,6 +79,8 @@ class OpenAiProvider(Provider):
         payload = {k: v for k, v in payload.items() if v}
         response = self._send_request(payload)
 
+
+
         # Check for context_length_exceeded error for single, long input message
         if "error" in response.json() and len(messages) == 1:
             openai_single_message_context_length_exceeded(response.json()["error"])
@@ -86,13 +88,16 @@ class OpenAiProvider(Provider):
         data = raise_for_status(response).json()
         message = openai_response_to_message(data)
 
+        # optionally use the reasoning model to get a better answer if tool usage isn't required.
         resoning_model = self.get_reasoning_model()
         if resoning_model and len(self.tool_use(message)) == 0:
-            if len(data["choices"][0]["message"]["content"]) > 100:                
+            # will limit its invocation to non trivial things for now
+            filtered_messages = self.messages_filtered(messages)            
+            if len(filtered_messages[-1]['content']) > 50 and len(data["choices"][0]["message"]["content"]) > 100:                
                 print("---> using deep reasoning")
                 payload = dict(
                     messages=[                        
-                        *self.messages_filtered(messages),
+                        *filtered_messages,
                     ],
                     model=resoning_model,
                     **kwargs,
@@ -142,5 +147,6 @@ class OpenAiProvider(Provider):
         return messages_spec
     
     def get_reasoning_model(self):
+        """ set this to o1-mini or o1-preview depending if you are doing code or not """
         return os.environ.get("OPENAI_REASONING", None)
 
