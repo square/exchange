@@ -86,15 +86,15 @@ class OpenAiProvider(Provider):
         data = raise_for_status(response).json()
         message = openai_response_to_message(data)
 
-        tool_uses = [content for content in message.content if isinstance(content, ToolUse) or isinstance(content, ToolResult)]
-        if len(tool_uses) == 0:
+        resoning_model = self.get_reasoning_model()
+        if resoning_model and len(self.tool_use(message)) == 0:
             if len(data["choices"][0]["message"]["content"]) > 100:                
-                print("using deep reasoning")
+                print("---> using deep reasoning")
                 payload = dict(
-                    messages=[
+                    messages=[                        
                         *self.messages_filtered(messages),
                     ],
-                    model="o1-mini",
+                    model=resoning_model,
                     **kwargs,
                 )
                 payload = {k: v for k, v in payload.items() if v}
@@ -111,12 +111,17 @@ class OpenAiProvider(Provider):
         usage = self.get_usage(data)
         return message, usage
 
+    def tool_use(self, message):
+        """ checks if the returned message is asking for tool usage or not """
+        return [content for content in message.content if isinstance(content, ToolUse) or isinstance(content, ToolResult)]
+
     @retry_httpx_request()
     def _send_request(self, payload: Any) -> httpx.Response:  # noqa: ANN401
         return self.client.post("v1/chat/completions", json=payload)
 
 
     def messages_filtered(self, messages: List[Message]) -> List[Dict[str, Any]]:
+        """This is for models that don't handle tool call output or images directly"""
         messages_spec = []
         for message in messages:
             converted = {"role": "user"}
@@ -136,4 +141,7 @@ class OpenAiProvider(Provider):
                 output = [converted] + output
             messages_spec.extend(output)
         return messages_spec
+    
+    def get_reasoning_model(self):
+        return os.environ.get("OPENAI_REASONING", None)
 
