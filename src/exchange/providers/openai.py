@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any, Dict, List, Tuple, Type
 
@@ -65,13 +66,30 @@ class OpenAiProvider(Provider):
         tools: Tuple[Tool],
         **kwargs: Dict[str, Any],
     ) -> Tuple[Message, Usage]:
+        tools=tools_to_openai_spec(tools) if tools else []
+
+        tools_usage = '''
+                        The tools will be parsed from json into python that is like this, including an id you will generate:                        
+                        ToolUse(
+                            id=tool_call["id"],
+                            name=function_name,
+                            parameters=json.loads(tool_call["function"]["arguments"]),
+                        )
+                    '''
+        
+        
+        
+        tools_message = "Here are some tools you can call and their details. If you want me to invoke them for you, return the tools at the end of your response with [TOOL_CALL] as json: " + json.dumps(tools)
+        tools_message += tools_usage
+
+        
         payload = dict(
             messages=[
-                {"role": "system", "content": system},
+                {"role": "user", "content": system},
+                {"role": "user", "content": tools_message},
                 *messages_to_openai_spec(messages),
             ],
-            model=model,
-            tools=tools_to_openai_spec(tools) if tools else [],
+            model=model,            
             **kwargs,
         )
         payload = {k: v for k, v in payload.items() if v}

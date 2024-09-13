@@ -33,6 +33,7 @@ def messages_to_openai_spec(messages: List[Message]) -> List[Dict[str, Any]]:
         converted = {"role": message.role}
         output = []
         for content in message.content:
+            print("message content", content)
             if isinstance(content, Text):
                 converted["content"] = content.text
             elif isinstance(content, ToolUse):
@@ -116,6 +117,93 @@ def openai_response_to_message(response: dict) -> Message:
     original = response["choices"][0]["message"]
     content = []
     text = original.get("content")
+
+    '''
+    actual text here and then if there is a tool call it follows: 
+[TOOL_CALL]
+```json
+[
+    {
+        "type": "function",
+        "function": {
+            "name": "update_plan",
+            "description": "Update the plan by overwriting all current tasks. This can be used to update the status of a task. This update will be shown to the user directly; you do not need to reiterate it.",
+            "parameters": {
+                "tasks": [
+                    {
+                        "description": "Create a file named 'a.txt' with content 'a'",
+                        "status": "planned"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "write_file",
+            "description": "Write a file at the specified path with the provided content. This will create any directories if they do not exist. The content will fully overwrite the existing file.",
+            "parameters": {
+                "path": "a.txt",
+                "content": "a"
+            }
+        }
+    }
+]
+```    
+    
+    '''
+    
+    # Split text from before the tool call if it is there, and set "tool_calls" to the JSON after it if it is present
+    tool_calls = None
+    if text:
+        tool_call_marker = '[TOOL_CALL]'
+        if tool_call_marker in text:
+            text_before, tool_call_json = text.split(tool_call_marker, 1)
+            print("tool_call_json", tool_call_json)
+            text = text_before.strip()
+            tool_call_json = tool_call_json.strip().strip('```json').strip().strip('```')
+            tool_calls = json.loads(tool_call_json)
+
+    if text:
+        content.append(Text(text=text))
+
+    if tool_calls is None:
+        tool_calls = original.get("tool_calls")
+
+    if tool_calls:
+        for tool_call in tool_calls:
+            try:
+                function_name = tool_call["function"]["name"]
+                if not re.match(r"^[a-zA-Z0-9_-]+$", function_name):
+                    content.append(
+                        ToolUse(
+                            id=tool_call["id"],
+                            name=function_name,
+                            parameters=tool_call["function"]["arguments"],
+                            is_error=True,
+                            error_message=f"The provided function name '{function_name}' had invalid characters, it must match this regex [a-zA-Z0-9_-]+",  # noqa: E501
+                        )
+                    )
+                else:
+                    content.append(
+                        ToolUse(
+                            id=tool_call["id"],
+                            name=function_name,
+                            parameters=json.loads(tool_call["function"]["arguments"]),
+                        )
+                    )
+            except json.JSONDecodeError:
+                content.append(
+                    ToolUse(
+                        id=tool_call["id"],
+                        name=tool_call["function"]["name"],
+                        parameters=tool_call["function"]["arguments"],
+                        is_error=True,
+                        error_message=f"Could not interpret tool use parameters for id {tool_call['id']}: {tool_call['function']['arguments']}",  # noqa: E501
+                    )
+                )
+
     if text:
         content.append(Text(text=text))
 
