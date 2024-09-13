@@ -14,7 +14,7 @@ from exchange.providers.utils import (
     tools_to_openai_spec,
 )
 from exchange.tool import Tool
-from exchange.content import ToolUse
+from exchange.content import ToolUse, ToolResult, Text
 
 
 OPENAI_HOST = "https://api.openai.com/"
@@ -86,17 +86,15 @@ class OpenAiProvider(Provider):
         data = raise_for_status(response).json()
         message = openai_response_to_message(data)
 
-        tool_uses = [content for content in message.content if isinstance(content, ToolUse)]
+        tool_uses = [content for content in message.content if isinstance(content, ToolUse) or isinstance(content, ToolResult)]
         if len(tool_uses) == 0:
-            raw_text = data["choices"][0]["message"]["content"]            
-            if len(raw_text) > 100:                
-                print("o1")
+            if len(data["choices"][0]["message"]["content"]) > 100:                
+                print("using deep reasoning")
                 payload = dict(
                     messages=[
-                        {"role": "user", "content": system},
-                        *messages_to_openai_spec(messages),
+                        *self.messages_filtered(messages),
                     ],
-                    model="o1-preview",
+                    model="o1-mini",
                     **kwargs,
                 )
                 payload = {k: v for k, v in payload.items() if v}
@@ -116,3 +114,26 @@ class OpenAiProvider(Provider):
     @retry_httpx_request()
     def _send_request(self, payload: Any) -> httpx.Response:  # noqa: ANN401
         return self.client.post("v1/chat/completions", json=payload)
+
+
+    def messages_filtered(self, messages: List[Message]) -> List[Dict[str, Any]]:
+        messages_spec = []
+        for message in messages:
+            converted = {"role": "user"}
+            output = []
+            for content in message.content:
+                if isinstance(content, Text):
+                    converted["content"] = content.text
+                elif isinstance(content, ToolResult):
+                    output.append(
+                        {
+                            "role": "user",
+                            "content": content.output,
+                        }
+                    )
+
+            if "content" in converted or "tool_calls" in converted:
+                output = [converted] + output
+            messages_spec.extend(output)
+        return messages_spec
+
