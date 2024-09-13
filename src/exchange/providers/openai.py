@@ -14,6 +14,8 @@ from exchange.providers.utils import (
     tools_to_openai_spec,
 )
 from exchange.tool import Tool
+from exchange.content import ToolUse
+
 
 OPENAI_HOST = "https://api.openai.com/"
 
@@ -82,8 +84,32 @@ class OpenAiProvider(Provider):
             openai_single_message_context_length_exceeded(response.json()["error"])
 
         data = raise_for_status(response).json()
-
         message = openai_response_to_message(data)
+
+        tool_uses = [content for content in message.content if isinstance(content, ToolUse)]
+        if len(tool_uses) == 0:
+            raw_text = data["choices"][0]["message"]["content"]            
+            if len(raw_text) > 100:                
+                print("o1")
+                payload = dict(
+                    messages=[
+                        {"role": "user", "content": system},
+                        *messages_to_openai_spec(messages),
+                    ],
+                    model="o1-preview",
+                    **kwargs,
+                )
+                payload = {k: v for k, v in payload.items() if v}
+                response = self._send_request(payload)
+
+                # Check for context_length_exceeded error for single, long input message
+                if "error" in response.json() and len(messages) == 1:
+                    openai_single_message_context_length_exceeded(response.json()["error"])
+
+                data = raise_for_status(response).json()
+
+                message = openai_response_to_message(data)
+
         usage = self.get_usage(data)
         return message, usage
 
