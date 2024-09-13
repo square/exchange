@@ -105,7 +105,6 @@ class OpenAiProvider(Provider):
                     openai_single_message_context_length_exceeded(response.json()["error"])
 
                 data = raise_for_status(response).json()
-
                 message = openai_response_to_message(data)
 
         usage = self.get_usage(data)
