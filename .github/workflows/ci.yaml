@@ -34,3 +34,49 @@ jobs:
 
       - name: Run tests
         run: uv run pytest tests -m 'not integration'
+
+  # This runs integration tests of the OpenAI API (via the Ollama provider).
+  # This is an alternative to clouds, as testing those on PR will leak secrets.
+  ollama:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install UV
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Source Cargo Environment
+        run: source $HOME/.cargo/env
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Cache Ollama models
+        id: cache-ollama
+        uses: actions/cache@v4
+        with: # cache key is based on where OLLAMA_MODEL is defined.
+          path: ~/.ollama/models  # default directory for Ollama models
+          key: ollama-${{ hashFiles('./src/exchange/providers/ollama.py') }}
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama
+        run: |
+            # Run the background, in a way that survives to the next step
+            nohup ollama serve > ollama.log 2>&1 &
+
+            # Block using the ready endpoint mentioned in ollama/ollama#3341
+            time curl --retry 5 --retry-connrefused --retry-delay 0 -sf http://localhost:11434
+
+      # First time pull, and first time execution of a model is slow, so we do
+      # this prior to running tests. This also reduces the chance of flakiness.
+      - name: Pull and Test Ollama model
+        run: |  # get the OLLAMA_MODEL from ./src/exchange/providers/ollama.py
+          OLLAMA_MODEL=$(uv run python -c "from src.exchange.providers.ollama import OLLAMA_MODEL; print(OLLAMA_MODEL)")
+          ollama pull $OLLAMA_MODEL || cat ollama.log
+          ollama run $OLLAMA_MODEL hello || cat ollama.log
+
+      - name: Run Ollama tests
+        run: uv run pytest tests -m integration -k ollama
