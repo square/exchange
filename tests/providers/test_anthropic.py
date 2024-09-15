@@ -112,16 +112,15 @@ def test_messages_to_anthropic_spec() -> None:
 
 
 @patch("httpx.Client.post")
-@patch("time.sleep", return_value=None)
 @patch("logging.warning")
 @patch("logging.error")
-def test_anthropic_completion(mock_error, mock_warning, mock_sleep, mock_post, anthropic_provider):
+def test_anthropic_completion(mock_error, mock_warning, mock_post, anthropic_provider):
     mock_response = {
         "content": [{"type": "text", "text": "Hello from Claude!"}],
         "usage": {"input_tokens": 10, "output_tokens": 25},
     }
 
-    # First 4 attempts fail with status code 429, 5th succeeds
+    # First attempts fail with status code 429, 2nd succeeds
     def create_response(status_code, json_data=None):
         response = httpx.Response(status_code)
         response._content = httpx._content.json_dumps(json_data or {}).encode()
@@ -129,11 +128,8 @@ def test_anthropic_completion(mock_error, mock_warning, mock_sleep, mock_post, a
         return response
 
     mock_post.side_effect = [
-        create_response(429),
-        create_response(429),
-        create_response(429),
-        create_response(429),
-        create_response(200, mock_response),
+        create_response(429),  # 1st attempt
+        create_response(200, mock_response),  # Final success
     ]
 
     model = "claude-3-5-sonnet-20240620"
@@ -144,7 +140,7 @@ def test_anthropic_completion(mock_error, mock_warning, mock_sleep, mock_post, a
 
     assert reply_message.content == [Text(text="Hello from Claude!")]
     assert reply_usage.total_tokens == 35
-    assert mock_post.call_count == 5
+    assert mock_post.call_count == 2
     mock_post.assert_any_call(
         "https://api.anthropic.com/v1/messages",
         json={

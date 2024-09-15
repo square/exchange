@@ -12,7 +12,8 @@ import httpx
 from exchange.content import Text, ToolResult, ToolUse
 from exchange.message import Message
 from exchange.providers import Provider, Usage
-from exchange.providers.retry_with_back_off_decorator import retry_httpx_request
+from tenacity import retry, wait_fixed, stop_after_attempt
+from exchange.providers.utils import retry_if_status
 from exchange.providers.utils import raise_for_status
 from exchange.tool import Tool
 
@@ -20,6 +21,13 @@ SERVICE = "bedrock-runtime"
 UTC = timezone.utc
 
 logger = logging.getLogger(__name__)
+
+retry_procedure = retry(
+    wait=wait_fixed(2),
+    stop=stop_after_attempt(2),
+    retry=retry_if_status(codes=[429], above=500),
+    reraise=True,
+)
 
 
 class AwsClient(httpx.Client):
@@ -110,7 +118,7 @@ class AwsClient(httpx.Client):
         algorithm = "AWS4-HMAC-SHA256"
         credential_scope = f"{date_stamp}/{self.region}/{service}/aws4_request"
         string_to_sign = (
-            f'{algorithm}\n{amz_date}\n{credential_scope}\n'
+            f"{algorithm}\n{amz_date}\n{credential_scope}\n"
             f'{hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()}'
         )
 
@@ -204,11 +212,10 @@ class BedrockProvider(Provider):
         payload = {k: v for k, v in payload.items() if v}
 
         path = f"{self.client.host}model/{model}/converse"
-        response = self._send_request(payload, path)
-        raise_for_status(response)
-        response_message = response.json()["output"]["message"]
+        response = self._post(payload, path)
+        response_message = response["output"]["message"]
 
-        usage_data = response.json()["usage"]
+        usage_data = response["usage"]
         usage = Usage(
             input_tokens=usage_data.get("inputTokens"),
             output_tokens=usage_data.get("outputTokens"),
@@ -217,9 +224,10 @@ class BedrockProvider(Provider):
 
         return self.response_to_message(response_message), usage
 
-    @retry_httpx_request()
-    def _send_request(self, payload: Any, path: str) -> httpx.Response:  # noqa: ANN401
-        return self.client.post(path, json=payload)
+    @retry_procedure
+    def _post(self, payload: Any, path: str) -> dict:  # noqa: ANN401
+        response = self.client.post(path, json=payload)
+        return raise_for_status(response).json()
 
     @staticmethod
     def message_to_bedrock_spec(message: Message) -> dict:

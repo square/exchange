@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2024-09-15
+
+- fix: retry only some 400s and raise error details
+
 ## [0.9.0] - 2024-09-09
 
 - chore: add just command for releases and update pyproject for changelog (#43)
