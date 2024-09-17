@@ -6,10 +6,18 @@ import httpx
 from exchange import Message, Tool
 from exchange.content import Text, ToolResult, ToolUse
 from exchange.providers.base import Provider, Usage
-from exchange.providers.retry_with_back_off_decorator import retry_httpx_request
+from tenacity import retry, wait_fixed, stop_after_attempt
+from exchange.providers.utils import retry_if_status
 from exchange.providers.utils import raise_for_status
 
 ANTHROPIC_HOST = "https://api.anthropic.com/v1/messages"
+
+retry_procedure = retry(
+    wait=wait_fixed(2),
+    stop=stop_after_attempt(2),
+    retry=retry_if_status(codes=[429], above=500),
+    reraise=True,
+)
 
 
 class AnthropicProvider(Provider):
@@ -138,14 +146,13 @@ class AnthropicProvider(Provider):
         )
         payload = {k: v for k, v in payload.items() if v}
 
-        response = self._send_request(payload)
-
-        response_data = raise_for_status(response).json()
-        message = self.anthropic_response_to_message(response_data)
-        usage = self.get_usage(response_data)
+        response = self._post(payload)
+        message = self.anthropic_response_to_message(response)
+        usage = self.get_usage(response)
 
         return message, usage
 
-    @retry_httpx_request()
-    def _send_request(self, payload: Dict[str, Any]) -> httpx.Response:
-        return self.client.post(ANTHROPIC_HOST, json=payload)
+    @retry_procedure
+    def _post(self, payload: dict) -> httpx.Response:
+        response = self.client.post(ANTHROPIC_HOST, json=payload)
+        return raise_for_status(response).json()

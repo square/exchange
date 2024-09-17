@@ -1,7 +1,5 @@
 from typing import List, Tuple
-from unittest.mock import Mock
 
-from httpx import HTTPStatusError
 import pytest
 
 from exchange.checkpoint import Checkpoint, CheckpointData
@@ -22,11 +20,13 @@ too_long_output = "x" * (2**20 + 1)
 too_long_token_output = "word " * 128000
 
 
-def assert_no_overlapping_checkpoints(exchange: Exchange) -> None:
+def no_overlapping_checkpoints(exchange: Exchange) -> bool:
     """Assert that there are no overlapping checkpoints in the exchange."""
     for i, checkpoint in enumerate(exchange.checkpoint_data.checkpoints):
         for other_checkpoint in exchange.checkpoint_data.checkpoints[i + 1 :]:
-            assert checkpoint.end_index < other_checkpoint.start_index
+            if not checkpoint.end_index < other_checkpoint.start_index:
+                return False
+    return True
 
 
 def checkpoint_to_index_pairs(checkpoints: List[Checkpoint]) -> List[Tuple[int, int]]:
@@ -337,7 +337,7 @@ def test_checkpoints_on_exchange(normal_exchange):
         "User message",
         "Message 3",
     ]
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
 
 def test_checkpoints_on_resumed_exchange(resumed_exchange) -> None:
@@ -354,7 +354,7 @@ def test_checkpoints_on_resumed_exchange(resumed_exchange) -> None:
     assert checkpoints[1].token_count == 8
     assert checkpoints[1].start_index == 5
     assert checkpoints[1].end_index == 5
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
 
 def test_pop_last_checkpoint_on_resumed_exchange(resumed_exchange) -> None:
@@ -369,7 +369,7 @@ def test_pop_last_checkpoint_on_resumed_exchange(resumed_exchange) -> None:
     ex.pop_last_checkpoint()
     assert len(ex.messages) == 0
     assert len(ex.checkpoint_data.checkpoints) == 0
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
 
 def test_pop_last_checkpoint_on_normal_exchange(normal_exchange) -> None:
@@ -383,7 +383,7 @@ def test_pop_last_checkpoint_on_normal_exchange(normal_exchange) -> None:
 
     assert len(ex.messages) == 2
     assert len(ex.checkpoint_data.checkpoints) == 2
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     ex.add(Message(role="user", content=[Text(text="User message")]))
     ex.pop_last_checkpoint()
     assert len(ex.messages) == 1
@@ -391,7 +391,7 @@ def test_pop_last_checkpoint_on_normal_exchange(normal_exchange) -> None:
     ex.reply()
     assert len(ex.messages) == 2
     assert len(ex.checkpoint_data.checkpoints) == 2
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
 
 def test_pop_first_message_no_messages():
@@ -420,7 +420,7 @@ def test_pop_first_message_checkpoint_with_many_messages(resumed_exchange):
     assert ex.checkpoint_data.checkpoints[1].start_index == 5
     assert ex.checkpoint_data.checkpoints[1].end_index == 5
     assert ex.checkpoint_data.message_index_offset == 0
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
     ex.pop_first_message()
 
@@ -429,7 +429,7 @@ def test_pop_first_message_checkpoint_with_many_messages(resumed_exchange):
     assert ex.checkpoint_data.checkpoints[0].start_index == 5
     assert ex.checkpoint_data.checkpoints[0].end_index == 5
     assert ex.checkpoint_data.message_index_offset == 1
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
     ex.pop_first_message()
 
@@ -438,7 +438,7 @@ def test_pop_first_message_checkpoint_with_many_messages(resumed_exchange):
     assert ex.checkpoint_data.checkpoints[0].start_index == 5
     assert ex.checkpoint_data.checkpoints[0].end_index == 5
     assert ex.checkpoint_data.message_index_offset == 2
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
     ex.pop_first_message()
 
@@ -447,7 +447,7 @@ def test_pop_first_message_checkpoint_with_many_messages(resumed_exchange):
     assert ex.checkpoint_data.checkpoints[0].start_index == 5
     assert ex.checkpoint_data.checkpoints[0].end_index == 5
     assert ex.checkpoint_data.message_index_offset == 3
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
     ex.pop_first_message()
 
@@ -456,7 +456,7 @@ def test_pop_first_message_checkpoint_with_many_messages(resumed_exchange):
     assert ex.checkpoint_data.checkpoints[0].start_index == 5
     assert ex.checkpoint_data.checkpoints[0].end_index == 5
     assert ex.checkpoint_data.message_index_offset == 4
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
     ex.pop_first_message()
 
@@ -465,14 +465,14 @@ def test_pop_first_message_checkpoint_with_many_messages(resumed_exchange):
     assert ex.checkpoint_data.checkpoints[0].start_index == 5
     assert ex.checkpoint_data.checkpoints[0].end_index == 5
     assert ex.checkpoint_data.message_index_offset == 5
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
     ex.pop_first_message()
 
     assert len(ex.messages) == 0
     assert len(ex.checkpoint_data.checkpoints) == 0
     assert ex.checkpoint_data.message_index_offset == 0
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
     with pytest.raises(ValueError) as e:
         ex.pop_first_message()
@@ -496,7 +496,7 @@ def test_varied_message_manipulation(normal_exchange):
     # (start, end)
     # (1, 1), (2, 2), (3, 3)
     # actual_index_in_messages_arr = any checkpoint index - offset
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     for i in range(3):
         assert ex.checkpoint_data.checkpoints[i].start_index == i + 1
         assert ex.checkpoint_data.checkpoints[i].end_index == i + 1
@@ -506,7 +506,7 @@ def test_varied_message_manipulation(normal_exchange):
     assert len(ex.messages) == 2
     assert len(ex.checkpoint_data.checkpoints) == 2
     assert ex.checkpoint_data.message_index_offset == 1
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     for i in range(2):
         assert ex.checkpoint_data.checkpoints[i].start_index == i + 1
         assert ex.checkpoint_data.checkpoints[i].end_index == i + 1
@@ -518,7 +518,7 @@ def test_varied_message_manipulation(normal_exchange):
     assert len(ex.messages) == 5
     assert len(ex.checkpoint_data.checkpoints) == 4
     assert ex.checkpoint_data.message_index_offset == 1
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(1, 1), (2, 2), (3, 4), (5, 5)]
 
     ex.pop_last_checkpoint()
@@ -526,7 +526,7 @@ def test_varied_message_manipulation(normal_exchange):
     assert len(ex.messages) == 4
     assert len(ex.checkpoint_data.checkpoints) == 3
     assert ex.checkpoint_data.message_index_offset == 1
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(1, 1), (2, 2), (3, 4)]
 
     ex.pop_first_message()
@@ -534,7 +534,7 @@ def test_varied_message_manipulation(normal_exchange):
     assert len(ex.messages) == 3
     assert len(ex.checkpoint_data.checkpoints) == 2
     assert ex.checkpoint_data.message_index_offset == 2
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2), (3, 4)]
 
     ex.pop_last_message()
@@ -542,14 +542,14 @@ def test_varied_message_manipulation(normal_exchange):
     assert len(ex.messages) == 2
     assert len(ex.checkpoint_data.checkpoints) == 1
     assert ex.checkpoint_data.message_index_offset == 2
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2)]
 
     ex.pop_last_message()
     assert len(ex.messages) == 1
     assert len(ex.checkpoint_data.checkpoints) == 1
     assert ex.checkpoint_data.message_index_offset == 2
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2)]
 
     ex.add(Message(role="assistant", content=[Text(text="Assistant message")]))
@@ -565,7 +565,7 @@ def test_varied_message_manipulation(normal_exchange):
     assert len(ex.messages) == 2
     assert len(ex.checkpoint_data.checkpoints) == 2
     assert ex.checkpoint_data.message_index_offset == 2
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2), (3, 3)]
 
     ex.pop_last_message()
@@ -573,7 +573,7 @@ def test_varied_message_manipulation(normal_exchange):
     assert len(ex.messages) == 1
     assert len(ex.checkpoint_data.checkpoints) == 1
     assert ex.checkpoint_data.message_index_offset == 2
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
     assert checkpoint_to_index_pairs(ex.checkpoint_data.checkpoints) == [(2, 2)]
 
     ex.pop_first_message()
@@ -667,20 +667,20 @@ def test_prepend_checkpointed_message_empty_exchange(normal_exchange):
     assert ex.checkpoint_data.message_index_offset == 0
     assert len(ex.checkpoint_data.checkpoints) == 3
     assert len(ex.messages) == 3
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
     ex.pop_first_checkpoint()
 
     assert ex.checkpoint_data.message_index_offset == 1
     assert len(ex.checkpoint_data.checkpoints) == 2
     assert len(ex.messages) == 2
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
     ex.prepend_checkpointed_message(Message(role="assistant", content=[Text(text="Assistant message")]), 10)
     assert ex.checkpoint_data.message_index_offset == 0
     assert len(ex.checkpoint_data.checkpoints) == 3
     assert len(ex.messages) == 3
-    assert_no_overlapping_checkpoints(ex)
+    assert no_overlapping_checkpoints(ex)
 
 
 def test_generate_successful_response_on_first_try(normal_exchange):
@@ -689,67 +689,75 @@ def test_generate_successful_response_on_first_try(normal_exchange):
     ex.generate()
 
 
-class MockErrorProvider(Provider):
-    def __init__(self, sequence: List[Message | Exception]):
-        self.sequence = sequence
-        self.call_count = 0
+def test_rewind_in_normal_exchange(normal_exchange):
+    ex = normal_exchange
+    ex.rewind()
 
-    def complete(self, model: str, system: str, messages: List[Message], tools: List[Tool]) -> Message:
-        next_item = self.sequence[self.call_count]
-        if self.call_count != len(self.sequence) - 1:
-            self.call_count += 1
-        if isinstance(next_item, Exception):
-            raise HTTPStatusError("Bad Request", request=Mock(), response=Mock())
-        return next_item, Usage(input_tokens=10, output_tokens=10, total_tokens=20)
+    assert len(ex.messages) == 0
+    assert len(ex.checkpoint_data.checkpoints) == 0
 
-
-def test_generate_http_error_recovery_empty_messages():
-    ex = Exchange(
-        provider=MockErrorProvider(
-            sequence=[Message.assistant("Some text"), Exception(), Message.assistant("Some other text")]
-        ),
-        model="gpt-4o-2024-05-13",
-        system="You are a helpful assistant.",
-        moderator=PassiveModerator(),
-    )
-    ex.add(Message.user("Hello"))
+    ex.add(Message(role="user", content=[Text("Hello")]))
     ex.generate()
-    ex.add(Message.user("Hello again!"))
-    ex.generate()
+    ex.add(Message(role="user", content=[Text("Hello")]))
 
-
-def test_generate_http_error_changes_messages():
-    ex = Exchange(
-        provider=MockErrorProvider(
-            sequence=[
-                Message(role="assistant", content=[ToolUse(id="1", name="dishwasher", parameters={})]),
-                Exception(),
-                Message.assistant("I'm done cleaning the dishes."),
-            ]
-        ),
-        model="gpt-4o-2024-05-13",
-        system="You are a helpful assistant.",
-        moderator=PassiveModerator(),
-    )
-    ex.add(Message.user("Hi! Can you clean the dishes for me?"))
-    ex.generate()
-    ex.add(Message(role="user", content=[ToolResult(tool_use_id="1", output="I cleaned the dishes.")]))
-    ex.generate()
+    # testing if it works with a user text message at the end
+    ex.rewind()
 
     assert len(ex.messages) == 2
     assert len(ex.checkpoint_data.checkpoints) == 2
-    assert ex.messages[0].text == "Hi! Can you clean the dishes for me?"
-    assert ex.messages[1].text == "I'm done cleaning the dishes."
+
+    ex.add(Message(role="user", content=[Text("Hello")]))
+    ex.generate()
+
+    # testing if it works with a non-user text message at the end
+    ex.rewind()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 2
 
 
-def test_generate_http_error_no_recovery():
+def test_rewind_with_tool_usage():
+    # simulating a real exchange with tool usage
     ex = Exchange(
-        provider=MockErrorProvider(sequence=[Exception()]),
+        provider=MockProvider(
+            sequence=[
+                Message.assistant("Hello!"),
+                Message(
+                    role="assistant",
+                    content=[ToolUse(id="1", name="dummy_tool", parameters={})],
+                ),
+                Message(
+                    role="assistant",
+                    content=[ToolUse(id="2", name="dummy_tool", parameters={})],
+                ),
+                Message.assistant("Done!"),
+            ],
+            usage_dicts=[
+                {"usage": {"input_tokens": 12, "output_tokens": 23}},
+                {"usage": {"input_tokens": 27, "output_tokens": 44}},
+                {"usage": {"input_tokens": 50, "output_tokens": 56}},
+                {"usage": {"input_tokens": 60, "output_tokens": 76}},
+            ],
+        ),
         model="gpt-4o-2024-05-13",
         system="You are a helpful assistant.",
+        tools=[Tool.from_function(dummy_tool)],
         moderator=PassiveModerator(),
     )
-    ex.add(Message(role="user", content=[Text("Hello")]))
-    with pytest.raises(Exception) as e:
-        ex.generate()
-    assert str(e.value) == "Failed to generate the next message."
+    ex.add(Message(role="user", content=[Text(text="test")]))
+    ex.reply()
+    ex.add(Message(role="user", content=[Text(text="kick it off!")]))
+    ex.reply()
+
+    # removing the last message to simulate not getting a response
+    ex.pop_last_message()
+
+    # calling rewind to last user message
+    ex.rewind()
+
+    assert len(ex.messages) == 2
+    assert len(ex.checkpoint_data.checkpoints) == 2
+    assert no_overlapping_checkpoints(ex)
+    assert ex.messages[0].content[0].text == "test"
+    assert type(ex.messages[1].content[0]) is Text
+    assert ex.messages[1].role == "assistant"

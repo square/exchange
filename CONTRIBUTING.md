@@ -19,19 +19,37 @@ uv run pytest tests -m "not integration"
 
 or, as a shortcut, 
 
-```
+```bash
 just test
 ```
 
 Generally if you are not developing a new provider, you can test most functionality through mocking and the normal
 test suite.
 
-However to ensure the providers work, we also have integration tests which actually require a credential and connect
+However, to ensure the providers work, we also have integration tests which actually require a credential and connect
 to the provider endpoints. Those can be run with
 
-```
+```bash
 uv run pytest tests -m integration
-# or `just integration` 
+# or `just integration`
+```
+
+### Integration testing with Ollama
+
+To run integration tests against Ollama, you need the model that tests expect available locally.
+
+First, run ollama and pull the models you want to test.
+```bash
+ollama serve
+# Then in another terminal, pull the model
+OLLAMA_MODEL=$(uv run python -c "from src.exchange.providers.ollama import OLLAMA_MODEL; print(OLLAMA_MODEL)")
+ollama pull $OLLAMA_MODEL
+```
+
+Finally, run ollama integration tests.
+```bash
+uv run pytest tests -m integration -k ollama
+# or `just integration -k ollama`
 ```
 
 ## Pull Requests
