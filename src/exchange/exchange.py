@@ -17,6 +17,7 @@ from exchange.token_usage_collector import _TokenUsageCollector, TokenUsage
 
 _token_usage_collector: _TokenUsageCollector = _TokenUsageCollector()
 
+
 def validate_tool_output(output: str) -> None:
     """Validate tool output for the given model"""
     max_output_chars = 2**20

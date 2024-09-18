@@ -1,5 +1,6 @@
 from exchange.token_usage_collector import _TokenUsageCollector, TokenUsage
 
+
 def test_collect(usage_factory):
     usage_collector = _TokenUsageCollector()
     usage_collector.collect("model1", usage_factory(input_tokens=100, output_tokens=1000))

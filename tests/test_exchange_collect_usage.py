@@ -8,6 +8,7 @@ from exchange.token_usage_collector import _TokenUsageCollector
 
 MODEL_NAME = "test-model"
 
+
 def create_exchange(mock_provider, dummy_tool):
     return Exchange(
         provider=mock_provider,
@@ -26,9 +27,7 @@ def test_exchange_generate_collect_usage(usage_factory, dummy_tool, monkeypatch)
     mock_provider.complete.return_value = (Message.assistant("msg"), usage)
     exchange = create_exchange(mock_provider, dummy_tool)
 
-    monkeypatch.setattr('exchange.exchange._token_usage_collector', mock_usage_collector)
+    monkeypatch.setattr("exchange.exchange._token_usage_collector", mock_usage_collector)
     exchange.generate()
 
     mock_usage_collector.collect.assert_called_once_with(MODEL_NAME, usage)
-
-
