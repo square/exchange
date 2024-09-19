@@ -6,7 +6,7 @@ from exchange.message import Message
 from exchange.tool import Tool
 
 
-@define
+@define(hash=True)
 class Usage:
     input_tokens: int = field(factory=None)
     output_tokens: int = field(default=None)

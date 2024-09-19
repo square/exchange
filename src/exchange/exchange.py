@@ -13,7 +13,7 @@ from exchange.moderators import Moderator
 from exchange.moderators.truncate import ContextTruncate
 from exchange.providers import Provider, Usage
 from exchange.tool import Tool
-from exchange.token_usage_collector import _token_usage_collector, TokenUsage
+from exchange.token_usage_collector import _token_usage_collector
 
 
 def validate_tool_output(output: str) -> None:
@@ -330,5 +330,5 @@ class Exchange:
         # this to be a required method of the provider instead.
         return len(self.messages) > 0 and self.messages[-1].role == "user"
 
-    def get_token_usage(self) -> List[TokenUsage]:
+    def get_token_usage(self) -> Dict[str, Usage]:
         return _token_usage_collector.get_token_usage_group_by_model()
