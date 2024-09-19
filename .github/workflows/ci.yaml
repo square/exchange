@@ -35,8 +35,8 @@ jobs:
       - name: Run tests
         run: uv run pytest tests -m 'not integration'
 
-  # This runs integration tests of the OpenAI API (via the Ollama provider).
-  # This is an alternative to clouds, as testing those on PR will leak secrets.
+  # This runs integration tests of the OpenAI API.
+  # We use Ollama to allow running on PRs from forks which can't access secrets.
   ollama:
     runs-on: ubuntu-latest
 
