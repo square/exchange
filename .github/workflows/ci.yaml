@@ -35,8 +35,8 @@ jobs:
       - name: Run tests
         run: uv run pytest tests -m 'not integration'
 
-  # This runs integration tests of the OpenAI API.
-  # We use Ollama to allow running on PRs from forks which can't access secrets.
+  # This runs integration tests of the OpenAI API, using Ollama to host models.
+  # This lets us test PRs from forks which can't access secrets like API keys.
   ollama:
     runs-on: ubuntu-latest
 
@@ -52,13 +52,6 @@ jobs:
       - name: Set up Python 3.12
         run: uv python install 3.12
 
-      - name: Cache Ollama models
-        id: cache-ollama
-        uses: actions/cache@v4
-        with: # cache key is based on where OLLAMA_MODEL is defined.
-          path: ~/.ollama/models  # default directory for Ollama models
-          key: ollama-${{ hashFiles('./src/exchange/providers/ollama.py') }}
-
       - name: Install Ollama
         run: curl -fsSL https://ollama.com/install.sh | sh
 
@@ -67,15 +60,14 @@ jobs:
             # Run the background, in a way that survives to the next step
             nohup ollama serve > ollama.log 2>&1 &
 
-            # Block using the ready endpoint mentioned in ollama/ollama#3341
-            time curl --retry 5 --retry-connrefused --retry-delay 0 -sf http://localhost:11434
+            # Block using the ready endpoint
+            time curl --retry 5 --retry-connrefused --retry-delay 1 -sf http://localhost:11434
 
-      # First time pull, and first time execution of a model is slow, so we do
-      # this prior to running tests. This also reduces the chance of flakiness.
-      - name: Pull and Test Ollama model
+      # Tests use OpenAI which does not have a mechanism to pull models. Run a
+      # simple prompt to (pull and) test the model first.
+      - name: Test Ollama model
         run: |  # get the OLLAMA_MODEL from ./src/exchange/providers/ollama.py
           OLLAMA_MODEL=$(uv run python -c "from src.exchange.providers.ollama import OLLAMA_MODEL; print(OLLAMA_MODEL)")
-          ollama pull $OLLAMA_MODEL || cat ollama.log
           ollama run $OLLAMA_MODEL hello || cat ollama.log
 
       - name: Run Ollama tests
