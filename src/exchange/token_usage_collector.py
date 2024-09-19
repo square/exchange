@@ -35,3 +35,6 @@ class _TokenUsageCollector:
             for model, (input_tokens, output_tokens) in token_count_group_by_model.items()
         ]
         return token_usage_list
+
+
+_token_usage_collector = _TokenUsageCollector()
