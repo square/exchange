@@ -3,6 +3,7 @@ from typing import Dict
 
 from exchange.providers.base import Usage
 
+
 class _TokenUsageCollector:
     def __init__(self) -> None:
         self.usage_data = []
@@ -21,5 +22,6 @@ class _TokenUsageCollector:
             if usage is not None and usage.total_tokens is not None:
                 usage_by_model.total_tokens += usage.total_tokens
         return usage_group_by_model
+
 
 _token_usage_collector = _TokenUsageCollector()
