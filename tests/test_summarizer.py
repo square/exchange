@@ -149,7 +149,6 @@ class AnotherMockProvider:
         system_prompt_tokens = 100
         input_token_count = system_prompt_tokens
 
-        message = self.sequence[self.current_index]
         if self.summarize_next:
             text = "Summary message here"
             self.summarize_next = False
@@ -160,6 +159,7 @@ class AnotherMockProvider:
                 output_tokens=len(text) * 2,
                 total_tokens=40 + len(text) * 2,
             )
+        message = self.sequence[self.current_index]
 
         if len(messages) > 0 and type(messages[0].content[0]) is ToolResult:
             raise ValueError("ToolResult should not be the first message")
@@ -213,13 +213,13 @@ def test_summarizer_generic_conversation(conversation_exchange_instance: Exchang
         if message.text != "Summary message here":
             i += 2
     checkpoints = conversation_exchange_instance.checkpoint_data.checkpoints
-    assert conversation_exchange_instance.checkpoint_data.total_token_count == 412
-    assert len(checkpoints) == 5
-    assert len(conversation_exchange_instance.messages) == 5
-    assert checkpoints[0].start_index == 25
-    assert checkpoints[0].end_index == 25
+    assert conversation_exchange_instance.checkpoint_data.total_token_count == 148
+    assert len(checkpoints) == 4
+    assert len(conversation_exchange_instance.messages) == 4
+    assert checkpoints[0].start_index == 26
+    assert checkpoints[0].end_index == 26
     assert checkpoints[-1].start_index == 29
     assert checkpoints[-1].end_index == 29
-    assert conversation_exchange_instance.checkpoint_data.message_index_offset == 20
-    assert conversation_exchange_instance.provider.summarized_count == 12
+    assert conversation_exchange_instance.checkpoint_data.message_index_offset == 26
+    assert conversation_exchange_instance.provider.summarized_count == 10
     assert conversation_exchange_instance.moderator.system_prompt_token_count == 100

@@ -81,11 +81,8 @@ class Exchange:
         self.add(message)
         self.add_checkpoints_from_usage(usage)  # this has to come after adding the response
 
-        # TODO: also call `rewrite` here, as this will make our
-        # messages *consistently* below the token limit. this currently
-        # is not the case because we could append a large message after calling
-        # `rewrite` above.
-        # self.moderator.rewrite(self)
+        # also call `rewrite` here, as this will make our messages are consistently below the token limit.
+        self.moderator.rewrite(self)
 
         _token_usage_collector.collect(self.model, usage)
         return message
