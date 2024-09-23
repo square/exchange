@@ -113,12 +113,9 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Download LocalAI
-        uses: robinraju/release-downloader@v1.11
-        with:
-          repository: mudler/LocalAI
-          latest: true
-          # Note the LocalAI linux binary is >1.2GB, so this step may take a while.
-          fileName: 'local-ai-Linux-x86_64'
+        run: gh release download -R mudler/LocalAI -p local-ai-Linux-x86_64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install LocalAI
         run: |
