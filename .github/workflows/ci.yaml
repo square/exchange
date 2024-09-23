@@ -70,17 +70,17 @@ jobs:
             nohup ollama serve > ollama.log 2>&1 &
 
             # Block using the ready endpoint
-            time curl --retry 5 --retry-connrefused --retry-delay 1 -sf http://localhost:11434 || cat ollama.log
+            time curl --retry 5 --retry-connrefused --retry-delay 1 -sf http://localhost:11434 || (cat ollama.log && exit 1)
 
       # Tests use OpenAI which does not have a mechanism to pull models. Run a
       # simple prompt to (pull and) test the model first.
       - name: Test Ollama model
-        run: ollama run $OLLAMA_MODEL hello || cat ollama.log
+        run: ollama run $OLLAMA_MODEL hello || (cat ollama.log && exit 1)
         env:
           OLLAMA_MODEL: ${{ matrix.ollama-model }}
 
       - name: Run Ollama tests
-        run: uv run pytest tests -m integration -k ollama || cat ollama.log
+        run: uv run pytest tests -m integration -k ollama || (cat ollama.log && exit 1)
         env:
           OLLAMA_MODEL: ${{ matrix.ollama-model }}
 
@@ -132,16 +132,16 @@ jobs:
             # before the model is downloaded.
 
             # Block using the ready endpoint
-            time curl --retry 5 --retry-connrefused --retry-delay 1 -sf http://localhost:8080/readyz || cat localai.log
+            time curl --retry 5 --retry-connrefused --retry-delay 1 -sf http://localhost:8080/readyz || (cat localai && exit 1)
 
       # Tests use OpenAI which does not have a mechanism to install models.
       # This blocks until the model is installed to prevent failures.
       - name: Install LocalAI model
-        run: local-ai models install $LOCALAI_MODEL || cat localai.log
+        run: local-ai models install $LOCALAI_MODEL || (cat localai && exit 1)
         env:
           LOCALAI_MODEL: ${{ matrix.localai-model }}
 
       - name: Run LocalAI tests
-        run: uv run pytest tests -m integration -k localai || cat localai.log
+        run: uv run pytest tests -m integration -k localai || (cat localai && exit 1)
         env:
           LOCALAI_MODEL: ${{ matrix.localai-model }}
