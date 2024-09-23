@@ -1,5 +1,6 @@
 from typing import Tuple
 
+import os
 import pytest
 
 from exchange import Text
@@ -26,7 +27,7 @@ def test_ollama_completion_integration():
 
 def ollama_complete() -> Tuple[Message, Usage]:
     provider = OllamaProvider.from_env()
-    model = OLLAMA_MODEL
+    model = os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)
     system = "You are a helpful assistant."
     messages = [Message.user("Hello")]
     return provider.complete(model=model, system=system, messages=messages, tools=None)

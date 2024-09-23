@@ -1,3 +1,4 @@
+import os
 import pytest
 from exchange.exchange import Exchange
 from exchange.message import Message
@@ -9,7 +10,7 @@ from exchange.tool import Tool
 too_long_chars = "x" * (2**20 + 1)
 
 cases = [
-    (get_provider("ollama"), OLLAMA_MODEL),
+    (get_provider("ollama"), os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)),
     (get_provider("openai"), "gpt-4o-mini"),
     (get_provider("databricks"), "databricks-meta-llama-3-70b-instruct"),
     (get_provider("bedrock"), "anthropic.claude-3-5-sonnet-20240620-v1:0"),
@@ -46,7 +47,9 @@ def test_tools(provider, model, tmp_path):
         Read the contents of the file.
 
         Args:
-            filename (str): The path to the file, which can be relative or absolute.
+            filename (str): The path to the file, which can be relative or
+            absolute. If it is a plain filename, it is assumed to be in the
+            current working directory.
 
         Returns:
             str: The contents of the file.
