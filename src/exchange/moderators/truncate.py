@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 # so once we get to this token size the token count will exceed this
 # by a little bit.
 # TODO: make this configurable for each provider
-MAX_TOKENS = 100000
+MAX_TOKENS = 128000
 
 
 class ContextTruncate(Moderator):
