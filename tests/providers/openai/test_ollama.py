@@ -9,7 +9,7 @@ from exchange.providers.ollama import OllamaProvider, OLLAMA_MODEL
 
 
 @pytest.mark.vcr()
-def test_ollama_completion():
+def test_ollama_completion(default_openai_api_key):
     reply_message, reply_usage = ollama_complete()
 
     assert reply_message.content == [Text(text="Hello! I'm here to help. How can I assist you today? Let's chat. 😊")]
