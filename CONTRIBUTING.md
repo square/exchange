@@ -41,7 +41,7 @@ To run integration tests against LocalAI, you need the model that tests expect a
 First, run `local-ai` and pull the models you want to test.
 ```bash
 local-ai run
-# Then in another terminal, pull the model
+# Then in another terminal, install the model
 LOCALAI_MODEL=$(uv run python -c "from src.exchange.providers.localai import LOCALAI_MODEL; print(LOCALAI_MODEL)")
 local-ai models install $LOCALAI_MODEL
 ```
