@@ -49,7 +49,7 @@ def exchange_instance():
 
 @pytest.fixture
 def summarizer_instance():
-    return ContextSummarizer(max_tokens=300)
+    return ContextSummarizer(max_tokens=300, summarization_offset=100)
 
 
 def test_context_summarizer_rewrite(exchange_instance: Exchange, summarizer_instance: ContextSummarizer):
@@ -199,9 +199,7 @@ def conversation_exchange_instance():
         provider=AnotherMockProvider(),
         model="test-model",
         system="test-system",
-        moderator=ContextSummarizer(max_tokens=300),
-        # TODO: make it work with an offset so we don't have to send off requests basically
-        # at every generate step
+        moderator=ContextSummarizer(max_tokens=300, summarization_offset=100),
     )
     return ex
 
@@ -215,11 +213,11 @@ def test_summarizer_generic_conversation(conversation_exchange_instance: Exchang
         if message.text != "Summary message here":
             i += 2
     checkpoints = conversation_exchange_instance.checkpoint_data.checkpoints
-    assert conversation_exchange_instance.checkpoint_data.total_token_count == 570
-    assert len(checkpoints) == 10
-    assert len(conversation_exchange_instance.messages) == 10
-    assert checkpoints[0].start_index == 20
-    assert checkpoints[0].end_index == 20
+    assert conversation_exchange_instance.checkpoint_data.total_token_count == 412
+    assert len(checkpoints) == 5
+    assert len(conversation_exchange_instance.messages) == 5
+    assert checkpoints[0].start_index == 25
+    assert checkpoints[0].end_index == 25
     assert checkpoints[-1].start_index == 29
     assert checkpoints[-1].end_index == 29
     assert conversation_exchange_instance.checkpoint_data.message_index_offset == 20
