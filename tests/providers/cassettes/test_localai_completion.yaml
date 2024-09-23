@@ -1,0 +1,68 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      host:
+      - localhost:8080
+      user-agent:
+      - python-httpx/0.27.2
+    method: GET
+    uri: http://localhost:8080/readyz
+  response:
+    body:
+      string: OK
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Mon, 23 Sep 2024 03:40:21 GMT
+      Set-Cookie: test_set_cookie
+      openai-organization: test_openai_org_key
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a helpful assistant
+      who is succinct."}, {"role": "user", "content": "Hello"}], "model": "mistral-nemo-instruct-2407"}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '170'
+      content-type:
+      - application/json
+      host:
+      - localhost:8080
+      user-agent:
+      - python-httpx/0.27.2
+    method: POST
+    uri: http://localhost:8080/v1/chat/completions
+  response:
+    body:
+      string: '{"created":1727062822,"object":"chat.completion","id":"e3f2f8d6-ab2b-4a30-bcf0-b2c1cfd88912","model":"mistral-nemo-instruct-2407","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"Hi!
+        How can I help you today?"}}],"usage":{"prompt_tokens":15,"completion_tokens":10,"total_tokens":25}}'
+    headers:
+      Content-Length:
+      - '320'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 23 Sep 2024 03:40:22 GMT
+      Set-Cookie: test_set_cookie
+      openai-organization: test_openai_org_key
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -34,11 +34,32 @@ uv run pytest tests -m integration
 # or `just integration`
 ```
 
+### Integration testing with LocalAI
+
+To run integration tests against LocalAI, you need the model that tests expect available locally.
+
+First, run `local-ai` and pull the models you want to test.
+```bash
+local-ai run
+# Then in another terminal, pull the model
+LOCALAI_MODEL=$(uv run python -c "from src.exchange.providers.localai import LOCALAI_MODEL; print(LOCALAI_MODEL)")
+local-ai models install $LOCALAI_MODEL
+```
+
+Finally, run LocalAI integration tests.
+```bash
+uv run pytest tests -m integration -k localai
+# or `just integration -k localai`
+```
+
+Note: The `LOCALAI_MODEL` variable controls which model is used in tests. If you want to run with a
+different model, set that before invoking them.
+
 ### Integration testing with Ollama
 
 To run integration tests against Ollama, you need the model that tests expect available locally.
 
-First, run ollama and pull the models you want to test.
+First, run `ollama` and pull the models you want to test.
 ```bash
 ollama serve
 # Then in another terminal, pull the model
@@ -51,6 +72,9 @@ Finally, run ollama integration tests.
 uv run pytest tests -m integration -k ollama
 # or `just integration -k ollama`
 ```
+
+Note: The `OLLAMA_MODEL` variable controls which model is used in tests. If you want to run with a
+different model, set that before invoking them.
 
 ## Pull Requests
 

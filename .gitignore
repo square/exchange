@@ -144,3 +144,6 @@ uv.lock
 
 # PyCharm
 .idea/
+
+# LocalAI
+models/

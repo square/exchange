@@ -35,7 +35,7 @@ jobs:
       - name: Run tests
         run: uv run pytest tests -m 'not integration'
 
-  # This runs integration tests of the OpenAI API, using Ollama to host models.
+  # This integration tests the OpenAI API, using Ollama to host models.
   # This lets us test PRs from forks which can't access secrets like API keys.
   ollama:
     runs-on: ubuntu-latest
@@ -43,7 +43,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          # Only test the lastest python version.
+          # Only test the latest python version.
           - "3.12"
         ollama-model:
           # For quicker CI, use a smaller, tool-capable model than the default.
@@ -70,7 +70,7 @@ jobs:
             nohup ollama serve > ollama.log 2>&1 &
 
             # Block using the ready endpoint
-            time curl --retry 5 --retry-connrefused --retry-delay 1 -sf http://localhost:11434
+            time curl --retry 5 --retry-connrefused --retry-delay 1 -sf http://localhost:11434 || cat ollama.log
 
       # Tests use OpenAI which does not have a mechanism to pull models. Run a
       # simple prompt to (pull and) test the model first.
@@ -80,6 +80,71 @@ jobs:
           OLLAMA_MODEL: ${{ matrix.ollama-model }}
 
       - name: Run Ollama tests
-        run: uv run pytest tests -m integration -k ollama
+        run: uv run pytest tests -m integration -k ollama || cat ollama.log
         env:
           OLLAMA_MODEL: ${{ matrix.ollama-model }}
+
+  # This integration tests the OpenAI API, using LocalAI to host models.
+  # This lets us test PRs from forks which can't access secrets like API keys.
+  localai:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version:
+          # Only test the latest python version.
+          - "3.12"
+        localai-model:
+          # TODO: This is is the default model, as we haven't yet found a
+          # small model that passes tests when run with LocalAI. For example,
+          # "qwen2.5-0.5b-instruct" fails or hangs.
+          - "mistral-nemo-instruct-2407"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install UV
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Source Cargo Environment
+        run: source $HOME/.cargo/env
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Download LocalAI
+        uses: robinraju/release-downloader@v1.11
+        with:
+          repository: mudler/LocalAI
+          latest: true
+          # Note the LocalAI linux binary is >1.2GB, so this step may take a while.
+          fileName: 'local-ai-Linux-x86_64'
+
+      - name: Install LocalAI
+        run: |
+          mv local-ai-Linux-x86_64 /usr/local/bin/local-ai
+          chmod +x /usr/local/bin/local-ai
+
+      - name: Start LocalAI
+        run: |
+            # Run the background, in a way that survives to the next step
+            nohup local-ai run > localai.log 2>&1 &
+
+            # Note: we don't `local-ai run` with the `LOCALAI_MODELS` env var
+            # because the it would introduce a race. The below check would pass
+            # before the model is downloaded.
+
+            # Block using the ready endpoint
+            time curl --retry 5 --retry-connrefused --retry-delay 1 -sf http://localhost:8080/readyz || cat localai.log
+
+      # Tests use OpenAI which does not have a mechanism to install models.
+      # This blocks until the model is installed to prevent failures.
+      - name: Install LocalAI model
+        run: local-ai models install $LOCALAI_MODEL || cat localai.log
+        env:
+          LOCALAI_MODEL: ${{ matrix.localai-model }}
+
+      - name: Run LocalAI tests
+        run: uv run pytest tests -m integration -k localai || cat localai.log
+        env:
+          LOCALAI_MODEL: ${{ matrix.localai-model }}
