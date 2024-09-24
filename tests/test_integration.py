@@ -48,8 +48,8 @@ def test_tools(provider, model, tmp_path):
 
         Args:
             filename (str): The path to the file, which can be relative or
-            absolute. If it is a plain filename, it is assumed to be in the
-            current working directory.
+                absolute. If it is a plain filename, it is assumed to be in the
+                current working directory.
 
         Returns:
             str: The contents of the file.
@@ -60,6 +60,7 @@ def test_tools(provider, model, tmp_path):
     ex = Exchange(
         provider=provider,
         model=model,
+        moderator=ContextTruncate(model),
         system="You are a helpful assistant. Expect to need to read a file using read_file.",
         tools=(Tool.from_function(read_file),),
     )
