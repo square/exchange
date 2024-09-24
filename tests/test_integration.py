@@ -12,13 +12,13 @@ too_long_chars = "x" * (2**20 + 1)
 cases = [
     # Set seed and temperature for more determinism, to avoid flakes
     (get_provider("ollama"), os.getenv("OLLAMA_MODEL", OLLAMA_MODEL), dict(seed=3, temperature=0.1)),
-    (get_provider("openai"), "gpt-4o-mini", dict()),
+    (get_provider("openai"), os.getenv("OPENAI_MODEL", "gpt-4o-mini"), dict()),
     (get_provider("databricks"), "databricks-meta-llama-3-70b-instruct", dict()),
     (get_provider("bedrock"), "anthropic.claude-3-5-sonnet-20240620-v1:0", dict()),
 ]
 
 
-@pytest.mark.integration  # skipped in CI/CD
+@pytest.mark.integration
 @pytest.mark.parametrize("provider,model,kwargs", cases)
 def test_simple(provider, model, kwargs):
     provider = provider.from_env()
@@ -39,7 +39,7 @@ def test_simple(provider, model, kwargs):
     assert "gandalf" in response.text.lower()
 
 
-@pytest.mark.integration  # skipped in CI/CD
+@pytest.mark.integration
 @pytest.mark.parametrize("provider,model,kwargs", cases)
 def test_tools(provider, model, kwargs, tmp_path):
     provider = provider.from_env()

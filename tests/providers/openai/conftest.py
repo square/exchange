@@ -1,22 +1,25 @@
 import os
+from typing import Type, Tuple
+
 import pytest
 
-OPENAI_MODEL = "gpt-4o-mini"
+from exchange import Message
+from exchange.providers import Usage, Provider
+
 OPENAI_API_KEY = "test_openai_api_key"
 OPENAI_ORG_ID = "test_openai_org_key"
 OPENAI_PROJECT_ID = "test_openai_project_id"
 
 
 @pytest.fixture
-def default_openai_api_key(monkeypatch):
+def default_openai_env(monkeypatch):
     """
-    This fixture avoids the error OpenAiProvider.from_env() raises when the
-    OPENAI_API_KEY is not set in the environment.
+    This fixture prevents OpenAIProvider.from_env() from erring on missing
+    environment variables.
 
     When running VCR tests for the first time or after deleting a cassette
-    recording, a real OPENAI_API_KEY must be passed as an environment variable,
-    so real responses can be fetched. Subsequent runs use the recorded data, so
-    don't need a real key.
+    recording, set required environment variables, so that real requests don't
+    fail. Subsequent runs use the recorded data, so don't them.
     """
     if "OPENAI_API_KEY" not in os.environ:
         monkeypatch.setenv("OPENAI_API_KEY", OPENAI_API_KEY)
@@ -50,3 +53,10 @@ def scrub_response_headers(response):
     response["headers"]["openai-organization"] = OPENAI_ORG_ID
     response["headers"]["Set-Cookie"] = "test_set_cookie"
     return response
+
+
+def complete(provider_cls: Type[Provider], model: str) -> Tuple[Message, Usage]:
+    provider = provider_cls.from_env()
+    system = "You are a helpful assistant."
+    messages = [Message.user("Hello")]
+    return provider.complete(model=model, system=system, messages=messages, tools=None)

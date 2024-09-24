@@ -43,7 +43,7 @@ class OpenAiProvider(Provider):
                 "Failed to get OPENAI_API_KEY from the environment, see https://platform.openai.com/docs/api-reference/api-keys"
             )
         client = httpx.Client(
-            base_url=url,
+            base_url=url + "v1/",
             auth=("Bearer", key),
             timeout=httpx.Timeout(60 * 10),
         )
@@ -93,5 +93,9 @@ class OpenAiProvider(Provider):
 
     @retry_procedure
     def _post(self, payload: dict) -> dict:
-        response = self.client.post("v1/chat/completions", json=payload)
+        # Note: While OpenAI and Ollama mount the API under "v1", this is
+        # conventional and not a strict requirement. For example, Azure OpenAI
+        # mounts the API under the deployment name, and "v1" is not in the URL.
+        # See https://github.com/openai/openai-openapi/blob/master/openapi.yaml
+        response = self.client.post("chat/completions", json=payload)
         return raise_for_status(response).json()

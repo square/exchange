@@ -37,7 +37,10 @@ Here's an example profile configuration to try:
             base_url=url,
             timeout=httpx.Timeout(60 * 10),
         )
-        # from_env is expected to fail if provider is not available
-        # so we run a quick test that the endpoint is running
-        client.get("")
+        # from_env is expected to fail if required ENV variables are not
+        # available. Since this provider can run with defaults, we substitute
+        # a health check to verify the endpoint is running.
+        client.get("/")
+        # The OpenAI API is defined after "v1/", so we need to join it here.
+        client.base_url = client.base_url.join("v1/")
         return cls(client)
