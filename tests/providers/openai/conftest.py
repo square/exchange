@@ -1,10 +1,18 @@
 import os
+from typing import Type, Tuple
+
 import pytest
 
-OPENAI_MODEL = "gpt-4o-mini"
+from exchange import Message
+from exchange.providers import Usage, Provider
+from exchange.providers.ollama import OLLAMA_MODEL
+
 OPENAI_API_KEY = "test_openai_api_key"
 OPENAI_ORG_ID = "test_openai_org_key"
 OPENAI_PROJECT_ID = "test_openai_project_id"
+
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 
 @pytest.fixture
@@ -50,3 +58,10 @@ def scrub_response_headers(response):
     response["headers"]["openai-organization"] = OPENAI_ORG_ID
     response["headers"]["Set-Cookie"] = "test_set_cookie"
     return response
+
+
+def complete(provider_cls: Type[Provider], model: str) -> Tuple[Message, Usage]:
+    provider = provider_cls.from_env()
+    system = "You are a helpful assistant."
+    messages = [Message.user("Hello")]
+    return provider.complete(model=model, system=system, messages=messages, tools=None)
