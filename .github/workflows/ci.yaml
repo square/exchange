@@ -47,7 +47,7 @@ jobs:
           - "3.12"
         ollama-model:
           # For quicker CI, use a smaller, tool-capable model than the default.
-          - "qwen2.5:0.5b"
+          - "qwen2.5"
 
     steps:
       - uses: actions/checkout@v4
