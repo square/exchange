@@ -26,7 +26,7 @@ def test_ollama_complete_integration():
 
 
 @pytest.mark.vcr()
-def test_ollama_tools(default_openai_env):
+def test_ollama_tools():
     reply_message, reply_usage = tools(OllamaProvider, OLLAMA_MODEL)
 
     tool_use = reply_message.content[0]
