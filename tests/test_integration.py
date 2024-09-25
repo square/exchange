@@ -10,16 +10,16 @@ from exchange.tool import Tool
 too_long_chars = "x" * (2**20 + 1)
 
 cases = [
-    (get_provider("ollama"), os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)),
-    (get_provider("openai"), "gpt-4o-mini"),
-    (get_provider("databricks"), "databricks-meta-llama-3-70b-instruct"),
-    (get_provider("bedrock"), "anthropic.claude-3-5-sonnet-20240620-v1:0"),
+    (get_provider("ollama"), os.getenv("OLLAMA_MODEL", OLLAMA_MODEL), dict(seed=3, temperature=0.1)),
+    (get_provider("openai"), "gpt-4o-mini", dict()),
+    (get_provider("databricks"), "databricks-meta-llama-3-70b-instruct", dict()),
+    (get_provider("bedrock"), "anthropic.claude-3-5-sonnet-20240620-v1:0", dict()),
 ]
 
 
 @pytest.mark.integration  # skipped in CI/CD
-@pytest.mark.parametrize("provider,model", cases)
-def test_simple(provider, model):
+@pytest.mark.parametrize("provider,model,kwargs", cases)
+def test_simple(provider, model, kwargs):
     provider = provider.from_env()
 
     ex = Exchange(
@@ -27,6 +27,7 @@ def test_simple(provider, model):
         model=model,
         moderator=ContextTruncate(model),
         system="You are a helpful assistant.",
+        generation_args=kwargs,
     )
 
     ex.add(Message.user("Who is the most famous wizard from the lord of the rings"))
@@ -38,8 +39,8 @@ def test_simple(provider, model):
 
 
 @pytest.mark.integration  # skipped in CI/CD
-@pytest.mark.parametrize("provider,model", cases)
-def test_tools(provider, model, tmp_path):
+@pytest.mark.parametrize("provider,model,kwargs", cases)
+def test_tools(provider, model, kwargs, tmp_path):
     provider = provider.from_env()
 
     def read_file(filename: str) -> str:
@@ -48,8 +49,8 @@ def test_tools(provider, model, tmp_path):
 
         Args:
             filename (str): The path to the file, which can be relative or
-            absolute. If it is a plain filename, it is assumed to be in the
-            current working directory.
+                absolute. If it is a plain filename, it is assumed to be in the
+                current working directory.
 
         Returns:
             str: The contents of the file.
@@ -60,8 +61,10 @@ def test_tools(provider, model, tmp_path):
     ex = Exchange(
         provider=provider,
         model=model,
+        moderator=ContextTruncate(model),
         system="You are a helpful assistant. Expect to need to read a file using read_file.",
         tools=(Tool.from_function(read_file),),
+        generation_args=kwargs,
     )
 
     ex.add(Message.user("What are the contents of this file? test.txt"))
@@ -72,8 +75,8 @@ def test_tools(provider, model, tmp_path):
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("provider,model", cases)
-def test_tool_use_output_chars(provider, model):
+@pytest.mark.parametrize("provider,model,kwargs", cases)
+def test_tool_use_output_chars(provider, model, kwargs):
     provider = provider.from_env()
 
     def get_password() -> str:
@@ -86,6 +89,7 @@ def test_tool_use_output_chars(provider, model):
         moderator=ContextTruncate(model),
         system="You are a helpful assistant. Expect to need to authenticate using get_password.",
         tools=(Tool.from_function(get_password),),
+        generation_args=kwargs,
     )
 
     ex.add(Message.user("Can you authenticate this session by responding with the password"))

@@ -3,7 +3,7 @@ import traceback
 from copy import deepcopy
 from typing import Any, Dict, List, Mapping, Tuple
 
-from attrs import define, evolve, field
+from attrs import define, evolve, field, Factory
 from tiktoken import get_encoding
 
 from exchange.checkpoint import Checkpoint, CheckpointData
@@ -44,6 +44,7 @@ class Exchange:
     tools: Tuple[Tool] = field(factory=tuple, converter=tuple)
     messages: List[Message] = field(factory=list)
     checkpoint_data: CheckpointData = field(factory=CheckpointData)
+    generation_args: dict = field(default=Factory(dict))
 
     @property
     def _toolmap(self) -> Mapping[str, Tool]:
@@ -77,6 +78,7 @@ class Exchange:
             self.system,
             messages=self.messages,
             tools=self.tools,
+            **self.generation_args,
         )
         self.add(message)
         self.add_checkpoints_from_usage(usage)  # this has to come after adding the response
