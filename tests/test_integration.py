@@ -10,6 +10,7 @@ from exchange.tool import Tool
 too_long_chars = "x" * (2**20 + 1)
 
 cases = [
+    # Set seed and temperature for more determinism, to avoid flakes
     (get_provider("ollama"), os.getenv("OLLAMA_MODEL", OLLAMA_MODEL), dict(seed=3, temperature=0.1)),
     (get_provider("openai"), "gpt-4o-mini", dict()),
     (get_provider("databricks"), "databricks-meta-llama-3-70b-instruct", dict()),
