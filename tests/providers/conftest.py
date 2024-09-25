@@ -3,8 +3,9 @@ from typing import Type, Tuple
 
 import pytest
 
-from exchange import Message
+from exchange import Message, ToolUse, ToolResult, Tool
 from exchange.providers import Usage, Provider
+from tests.conftest import read_file
 
 OPENAI_API_KEY = "test_openai_api_key"
 OPENAI_ORG_ID = "test_openai_org_key"
@@ -59,4 +60,28 @@ def complete(provider_cls: Type[Provider], model: str) -> Tuple[Message, Usage]:
     provider = provider_cls.from_env()
     system = "You are a helpful assistant."
     messages = [Message.user("Hello")]
+    return provider.complete(model=model, system=system, messages=messages, tools=None)
+
+
+def tools(provider_cls: Type[Provider], model: str) -> Tuple[Message, Usage]:
+    provider = provider_cls.from_env()
+    system = "You are a helpful assistant. Expect to need to read a file using read_file."
+    messages = [Message.user("What are the contents of this file? test.txt")]
+    return provider.complete(model=model, system=system, messages=messages, tools=(Tool.from_function(read_file),))
+
+
+def vision(provider_cls: Type[Provider], model: str) -> Tuple[Message, Usage]:
+    provider = provider_cls.from_env()
+    system = "You are a helpful assistant."
+    messages = [
+        Message.user("What does the first entry in the menu say?"),
+        Message(
+            role="assistant",
+            content=[ToolUse(id="xyz", name="screenshot", parameters={})],
+        ),
+        Message(
+            role="user",
+            content=[ToolResult(tool_use_id="xyz", output='"image:tests/test_image.png"')],
+        ),
+    ]
     return provider.complete(model=model, system=system, messages=messages, tools=None)

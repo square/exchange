@@ -6,6 +6,7 @@ from exchange.moderators import ContextTruncate
 from exchange.providers import get_provider
 from exchange.providers.ollama import OLLAMA_MODEL
 from exchange.tool import Tool
+from tests.conftest import read_file
 
 too_long_chars = "x" * (2**20 + 1)
 
@@ -43,21 +44,6 @@ def test_simple(provider, model, kwargs):
 @pytest.mark.parametrize("provider,model,kwargs", cases)
 def test_tools(provider, model, kwargs, tmp_path):
     provider = provider.from_env()
-
-    def read_file(filename: str) -> str:
-        """
-        Read the contents of the file.
-
-        Args:
-            filename (str): The path to the file, which can be relative or
-                absolute. If it is a plain filename, it is assumed to be in the
-                current working directory.
-
-        Returns:
-            str: The contents of the file.
-        """
-        assert filename == "test.txt"
-        return "hello exchange"
 
     ex = Exchange(
         provider=provider,

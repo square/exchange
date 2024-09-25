@@ -2,9 +2,9 @@ import os
 
 import pytest
 
-from exchange import Text
+from exchange import Text, ToolUse
 from exchange.providers.ollama import OllamaProvider, OLLAMA_MODEL
-from .conftest import complete
+from .conftest import complete, tools
 
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)
 
@@ -23,3 +23,26 @@ def test_ollama_complete_integration():
 
     assert reply[0].content is not None
     print("Completion content from OpenAI:", reply[0].content)
+
+
+@pytest.mark.vcr()
+def test_ollama_tools(default_openai_env):
+    reply_message, reply_usage = tools(OllamaProvider, OLLAMA_MODEL)
+
+    tool_use = reply_message.content[0]
+    assert isinstance(tool_use, ToolUse)
+    assert tool_use.id == "call_z6fgu3z3"
+    assert tool_use.name == "read_file"
+    assert tool_use.parameters == {"filename": "test.txt"}
+    assert reply_usage.total_tokens == 133
+
+
+@pytest.mark.integration
+def test_ollama_tools_integration():
+    reply = tools(OllamaProvider, OLLAMA_MODEL)
+
+    tool_use = reply[0].content[0]
+    assert isinstance(tool_use, ToolUse)
+    assert tool_use.id is not None
+    assert tool_use.name == "read_file"
+    assert tool_use.parameters == {"filename": "test.txt"}

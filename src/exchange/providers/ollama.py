@@ -40,7 +40,7 @@ Here's an example profile configuration to try:
         # from_env is expected to fail if required ENV variables are not
         # available. Since this provider can run with defaults, we substitute
         # a health check to verify the endpoint is running.
-        client.get("/")
+        client.get("")
         # The OpenAI API is defined after "v1/", so we need to join it here.
         client.base_url = client.base_url.join("v1/")
         return cls(client)
