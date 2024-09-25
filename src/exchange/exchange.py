@@ -10,7 +10,7 @@ from exchange.checkpoint import Checkpoint, CheckpointData
 from exchange.content import Text, ToolResult, ToolUse
 from exchange.message import Message
 from exchange.moderators import Moderator
-from exchange.moderators.summarizer import ContextSummarizer
+from exchange.moderators.summarizer import ContextTruncate
 from exchange.providers import Provider, Usage
 from exchange.tool import Tool
 from exchange.token_usage_collector import _token_usage_collector
@@ -40,7 +40,7 @@ class Exchange:
     provider: Provider
     model: str
     system: str
-    moderator: Moderator = field(default=ContextSummarizer())
+    moderator: Moderator = field(default=ContextTruncate())
     tools: Tuple[Tool] = field(factory=tuple, converter=tuple)
     messages: List[Message] = field(factory=list)
     checkpoint_data: CheckpointData = field(factory=CheckpointData)
