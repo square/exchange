@@ -2,9 +2,9 @@ import os
 
 import pytest
 
-from exchange import Text
+from exchange import Text, ToolUse
 from exchange.providers.azure import AzureProvider
-from .conftest import complete
+from .conftest import complete, tools
 
 AZURE_MODEL = os.getenv("AZURE_MODEL", "gpt-4o-mini")
 
@@ -23,3 +23,26 @@ def test_azure_complete_integration():
 
     assert reply[0].content is not None
     print("Completion content from Azure:", reply[0].content)
+
+
+@pytest.mark.vcr()
+def test_azure_tools(default_azure_env):
+    reply_message, reply_usage = tools(AzureProvider, AZURE_MODEL)
+
+    tool_use = reply_message.content[0]
+    assert isinstance(tool_use, ToolUse)
+    assert tool_use.id == "call_a47abadDxlGKIWjvYYvGVAHa"
+    assert tool_use.name == "read_file"
+    assert tool_use.parameters == {"filename": "test.txt"}
+    assert reply_usage.total_tokens == 125
+
+
+@pytest.mark.integration
+def test_azure_tools_integration():
+    reply = tools(AzureProvider, AZURE_MODEL)
+
+    tool_use = reply[0].content[0]
+    assert isinstance(tool_use, ToolUse)
+    assert tool_use.id is not None
+    assert tool_use.name == "read_file"
+    assert tool_use.parameters == {"filename": "test.txt"}
