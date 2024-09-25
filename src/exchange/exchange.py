@@ -107,6 +107,7 @@ class Exchange:
             for tool_use in response.tool_use:
                 tool_result = self.call_function(tool_use)
                 content.append(tool_result)
+            print(f"Tool call result - user content: {content}")
             self.add(Message(role="user", content=content))
 
             # We've reached the limit of tool calls - break out of the loop

@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 import pytest
+import json
 
 from exchange.checkpoint import Checkpoint, CheckpointData
 from exchange.content import Text, ToolResult, ToolUse
@@ -93,6 +94,60 @@ def test_reply_with_unsupported_tool():
 
     content = ex.messages[-2].content[0]
     assert isinstance(content, ToolResult) and content.is_error and "no tool exists" in content.output.lower()
+
+
+def test_generate_with_o1_model():
+    from exchange.providers.openai import parse_o1_assistant_reply
+
+    # Mock provider to simulate OpenAI 'o1' model behavior
+    class MockO1Provider(Provider):
+        def complete(self, model: str, system: str, messages: List[Message], tools: Tuple[Tool]):
+            # Simulate assistant's reply with a tool call in JSON format
+            reply_content = json.dumps({"tool_calls": [{"function": "dummy_tool", "parameters": {}}]})
+            message = parse_o1_assistant_reply(reply_content)
+            usage = Usage(input_tokens=10, output_tokens=20, total_tokens=30)
+            return message, usage
+
+    ex = Exchange(
+        provider=MockO1Provider(),
+        model="o1-mini",
+        system="You are a helpful assistant.",
+        tools=[Tool.from_function(dummy_tool)],
+    )
+    ex.add(Message.user("Call dummy tool twice, then msg user."))
+    message = ex.generate()
+
+    assert message.tool_use[0].name == "dummy_tool"
+
+
+def test_reply_with_o1_model():
+    from exchange.providers.openai import parse_o1_assistant_reply
+
+    # Mock provider to simulate OpenAI 'o1' model behavior
+    class MockO1Provider(Provider):
+        tool_call_count = 0
+
+        def complete(self, model: str, system: str, messages: List[Message], tools: Tuple[Tool]):
+            # Simulate assistant's reply with a tool call in JSON format
+            if self.tool_call_count < 2:
+                reply_content = json.dumps({"tool_calls": [{"function": "dummy_tool", "parameters": {}}]})
+                self.tool_call_count += 1
+            else:
+                reply_content = json.dumps({"message": "Hi user!"})
+            message = parse_o1_assistant_reply(reply_content)
+            usage = Usage(input_tokens=10, output_tokens=20, total_tokens=30)
+            return message, usage
+
+    ex = Exchange(
+        provider=MockO1Provider(),
+        model="o1-mini",
+        system="You are a helpful assistant.",
+        tools=[Tool.from_function(dummy_tool)],
+    )
+    ex.add(Message.user("Call dummy tool twice, then msg user."))
+    reply = ex.reply()
+
+    assert reply.text == "Hi user!"
 
 
 def test_invalid_tool_parameters():
