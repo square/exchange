@@ -95,7 +95,12 @@ def test_tool_use_output_chars(provider, model, kwargs):
 
     ex.add(Message.user("Can you authenticate this session by responding with the password"))
 
-    ex.reply()
+    response = ex.reply()
 
-    # Without our error handling, this would raise
-    # string too long. Expected a string with maximum length 1048576, but got a string with length ...
+    # In this case, the LLM call was successful, but the output failed
+    # validation in exchange. On failure, we not only should see the error in
+    # the response, but also that we broke the tool call loop. If we don't stop
+    # the loop, we might send the error back to the provider as prompt input
+    # and continue to fail until the max_tool_use limit.
+    assert "user" == response.role
+    assert "this tool call created an output that was too long to handle" in response.text.lower()
