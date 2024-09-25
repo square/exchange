@@ -23,7 +23,7 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Sun, 22 Sep 2024 23:40:13 GMT
+      - Wed, 25 Sep 2024 23:51:20 GMT
       Set-Cookie: test_set_cookie
       openai-organization: test_openai_org_key
     status:
@@ -31,7 +31,7 @@ interactions:
       message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "Hello"}], "model": "mistral-nemo"}'
+      {"role": "user", "content": "Hello"}], "model": "llama3.2"}'
     headers:
       accept:
       - '*/*'
@@ -40,7 +40,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '140'
+      - '136'
       content-type:
       - application/json
       host:
@@ -51,15 +51,17 @@ interactions:
     uri: http://localhost:11434/v1/chat/completions
   response:
     body:
-      string: "{\"id\":\"chatcmpl-429\",\"object\":\"chat.completion\",\"created\":1727048416,\"model\":\"mistral-nemo\",\"system_fingerprint\":\"fp_ollama\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"Hello!
-        I'm here to help. How can I assist you today? Let's chat. \U0001F60A\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":23,\"total_tokens\":33}}\n"
+      string: '{"id":"chatcmpl-4","object":"chat.completion","created":1727308281,"model":"llama3.2","system_fingerprint":"fp_ollama","choices":[{"index":0,"message":{"role":"assistant","content":"Hello!
+        How can I assist you today?"},"finish_reason":"stop"}],"usage":{"prompt_tokens":32,"completion_tokens":10,"total_tokens":42}}
+
+        '
     headers:
       Content-Length:
-      - '356'
+      - '315'
       Content-Type:
       - application/json
       Date:
-      - Sun, 22 Sep 2024 23:40:16 GMT
+      - Wed, 25 Sep 2024 23:51:21 GMT
       Set-Cookie: test_set_cookie
       openai-organization: test_openai_org_key
     status:
