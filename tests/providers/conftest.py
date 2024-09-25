@@ -19,7 +19,7 @@ def default_openai_env(monkeypatch):
 
     When running VCR tests for the first time or after deleting a cassette
     recording, set required environment variables, so that real requests don't
-    fail. Subsequent runs use the recorded data, so don't them.
+    fail. Subsequent runs use the recorded data, so don't need them.
     """
     if "OPENAI_API_KEY" not in os.environ:
         monkeypatch.setenv("OPENAI_API_KEY", OPENAI_API_KEY)

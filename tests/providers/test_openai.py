@@ -22,4 +22,4 @@ def test_openai_complete_integration():
     reply = complete(OpenAiProvider, OPENAI_MODEL)
 
     assert reply[0].content is not None
-    print("Complete content from OpenAI:", reply[0].content)
+    print("Completion content from OpenAI:", reply[0].content)
