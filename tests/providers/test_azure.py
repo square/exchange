@@ -22,4 +22,4 @@ def test_azure_complete_integration():
     reply = complete(AzureProvider, AZURE_MODEL)
 
     assert reply[0].content is not None
-    print("Complete content from Azure:", reply[0].content)
+    print("Completion content from Azure:", reply[0].content)

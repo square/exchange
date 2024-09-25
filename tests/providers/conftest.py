@@ -41,7 +41,7 @@ def default_azure_env(monkeypatch):
 
     When running VCR tests for the first time or after deleting a cassette
     recording, set required environment variables, so that real requests don't
-    fail. Subsequent runs use the recorded data, so don't them.
+    fail. Subsequent runs use the recorded data, so don't need them.
     """
     if "AZURE_CHAT_COMPLETIONS_HOST_NAME" not in os.environ:
         monkeypatch.setenv("AZURE_CHAT_COMPLETIONS_HOST_NAME", AZURE_ENDPOINT)
@@ -80,7 +80,7 @@ def scrub_request_url(request):
     This scrubs sensitive request data in provider-specific way. Note that headers
     are case-sensitive!
     """
-    if "openai" in request.uri:
+    if "openai.azure.com" in request.uri:
         request.uri = re.sub(r"https://[^/]+", AZURE_ENDPOINT, request.uri)
         request.uri = re.sub(r"/deployments/[^/]+", f"/deployments/{AZURE_DEPLOYMENT_NAME}", request.uri)
         request.headers["host"] = AZURE_ENDPOINT.replace("https://", "")
