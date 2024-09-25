@@ -3,7 +3,7 @@ import traceback
 from copy import deepcopy
 from typing import Any, Dict, List, Mapping, Tuple
 
-from attrs import define, evolve, field
+from attrs import define, evolve, field, Factory
 from tiktoken import get_encoding
 
 from exchange.checkpoint import Checkpoint, CheckpointData
@@ -13,6 +13,7 @@ from exchange.moderators import Moderator
 from exchange.moderators.truncate import ContextTruncate
 from exchange.providers import Provider, Usage
 from exchange.tool import Tool
+from exchange.token_usage_collector import _token_usage_collector
 
 
 def validate_tool_output(output: str) -> None:
@@ -43,6 +44,7 @@ class Exchange:
     tools: Tuple[Tool] = field(factory=tuple, converter=tuple)
     messages: List[Message] = field(factory=list)
     checkpoint_data: CheckpointData = field(factory=CheckpointData)
+    generation_args: dict = field(default=Factory(dict))
 
     @property
     def _toolmap(self) -> Mapping[str, Tool]:
@@ -76,6 +78,7 @@ class Exchange:
             self.system,
             messages=self.messages,
             tools=self.tools,
+            **self.generation_args,
         )
         self.add(message)
         self.add_checkpoints_from_usage(usage)  # this has to come after adding the response
@@ -86,6 +89,7 @@ class Exchange:
         # `rewrite` above.
         # self.moderator.rewrite(self)
 
+        _token_usage_collector.collect(self.model, usage)
         return message
 
     def reply(self, max_tool_use: int = 128) -> Message:
@@ -327,3 +331,6 @@ class Exchange:
         # Some models will have different requirements than others, so it may be better for
         # this to be a required method of the provider instead.
         return len(self.messages) > 0 and self.messages[-1].role == "user"
+
+    def get_token_usage(self) -> Dict[str, Usage]:
+        return _token_usage_collector.get_token_usage_group_by_model()
