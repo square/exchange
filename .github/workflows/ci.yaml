@@ -80,6 +80,8 @@ jobs:
           OLLAMA_MODEL: ${{ matrix.ollama-model }}
 
       - name: Run Ollama tests
-        run: uv run pytest tests -m integration -k ollama
+        # Tiny models can sometimes misunderstand or hallucinate. Try up to a
+        # few times as it is faster than always using a large model.
+        run: uv run pytest tests --retries 3 --retry-delay 1 -m integration -k ollama
         env:
           OLLAMA_MODEL: ${{ matrix.ollama-model }}
