@@ -41,5 +41,5 @@ Here's an example profile configuration to try:
         httpx.get(ollama_url, timeout=timeout)
 
         # When served by Ollama, the OpenAI API is available at the path "v1/".
-        client = httpx.Client(base_url=ollama_url.join("v1/"), timeout=timeout)
+        client = httpx.Client(base_url=ollama_url + "v1/", timeout=timeout)
         return cls(client)
