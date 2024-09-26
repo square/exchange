@@ -13,8 +13,8 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)
 def test_ollama_complete():
     reply_message, reply_usage = complete(OllamaProvider, OLLAMA_MODEL)
 
-    assert reply_message.content == [Text(text="Hello! I'm here to help. How can I assist you today? Let's chat. 😊")]
-    assert reply_usage.total_tokens == 33
+    assert reply_message.content == [Text(text="Hello! How can I assist you today?")]
+    assert reply_usage.total_tokens == 42
 
 
 @pytest.mark.integration
@@ -31,10 +31,10 @@ def test_ollama_tools():
 
     tool_use = reply_message.content[0]
     assert isinstance(tool_use, ToolUse)
-    assert tool_use.id == "call_z6fgu3z3"
+    assert tool_use.id == "call_v0tou7y4"
     assert tool_use.name == "read_file"
     assert tool_use.parameters == {"filename": "test.txt"}
-    assert reply_usage.total_tokens == 133
+    assert reply_usage.total_tokens == 230
 
 
 @pytest.mark.integration
@@ -42,7 +42,7 @@ def test_ollama_tools_integration():
     reply = tools(OllamaProvider, OLLAMA_MODEL)
 
     tool_use = reply[0].content[0]
-    assert isinstance(tool_use, ToolUse)
+    assert isinstance(tool_use, ToolUse), f"Expected ToolUse, but was {type(tool_use).__name__}"
     assert tool_use.id is not None
     assert tool_use.name == "read_file"
     assert tool_use.parameters == {"filename": "test.txt"}

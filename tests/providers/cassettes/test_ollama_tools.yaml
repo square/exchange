@@ -23,7 +23,7 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Wed, 25 Sep 2024 09:23:08 GMT
+      - Thu, 26 Sep 2024 00:21:32 GMT
       Set-Cookie: test_set_cookie
       openai-organization: test_openai_org_key
     status:
@@ -32,7 +32,7 @@ interactions:
 - request:
     body: '{"messages": [{"role": "system", "content": "You are a helpful assistant.
       Expect to need to read a file using read_file."}, {"role": "user", "content":
-      "What are the contents of this file? test.txt"}], "model": "mistral-nemo", "tools":
+      "What are the contents of this file? test.txt"}], "model": "llama3.2", "tools":
       [{"type": "function", "function": {"name": "read_file", "description": "Read
       the contents of the file.", "parameters": {"type": "object", "properties": {"filename":
       {"type": "string", "description": "The path to the file, which can be relative
@@ -46,7 +46,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '609'
+      - '605'
       content-type:
       - application/json
       host:
@@ -57,16 +57,16 @@ interactions:
     uri: http://localhost:11434/v1/chat/completions
   response:
     body:
-      string: '{"id":"chatcmpl-245","object":"chat.completion","created":1727256190,"model":"mistral-nemo","system_fingerprint":"fp_ollama","choices":[{"index":0,"message":{"role":"assistant","content":"","tool_calls":[{"id":"call_z6fgu3z3","type":"function","function":{"name":"read_file","arguments":"{\"filename\":\"test.txt\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":112,"completion_tokens":21,"total_tokens":133}}
+      string: '{"id":"chatcmpl-182","object":"chat.completion","created":1727310093,"model":"llama3.2","system_fingerprint":"fp_ollama","choices":[{"index":0,"message":{"role":"assistant","content":"","tool_calls":[{"id":"call_v0tou7y4","type":"function","function":{"name":"read_file","arguments":"{\"filename\":\"test.txt\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":212,"completion_tokens":18,"total_tokens":230}}
 
         '
     headers:
       Content-Length:
-      - '425'
+      - '421'
       Content-Type:
       - application/json
       Date:
-      - Wed, 25 Sep 2024 09:23:10 GMT
+      - Thu, 26 Sep 2024 00:21:33 GMT
       Set-Cookie: test_set_cookie
       openai-organization: test_openai_org_key
     status:
