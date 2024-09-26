@@ -30,7 +30,7 @@ def test_azure_tools(default_azure_env):
     reply_message, reply_usage = tools(AzureProvider, AZURE_MODEL)
 
     tool_use = reply_message.content[0]
-    assert isinstance(tool_use, ToolUse)
+    assert isinstance(tool_use, ToolUse), f"Expected ToolUse, but was {type(tool_use).__name__}"
     assert tool_use.id == "call_a47abadDxlGKIWjvYYvGVAHa"
     assert tool_use.name == "read_file"
     assert tool_use.parameters == {"filename": "test.txt"}
@@ -42,7 +42,7 @@ def test_azure_tools_integration():
     reply = tools(AzureProvider, AZURE_MODEL)
 
     tool_use = reply[0].content[0]
-    assert isinstance(tool_use, ToolUse)
+    assert isinstance(tool_use, ToolUse), f"Expected ToolUse, but was {type(tool_use).__name__}"
     assert tool_use.id is not None
     assert tool_use.name == "read_file"
     assert tool_use.parameters == {"filename": "test.txt"}
