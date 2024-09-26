@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from exchange.content import ToolResult, ToolUse
 from exchange.exchange import Exchange
@@ -6,7 +8,7 @@ from exchange.moderators import ContextTruncate
 from exchange.providers import get_provider
 
 cases = [
-    (get_provider("openai"), "gpt-4o-mini"),
+    (get_provider("openai"), os.getenv("OPENAI_MODEL", "gpt-4o-mini")),
 ]
 
 
