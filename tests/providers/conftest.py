@@ -58,7 +58,7 @@ def scrub_response_headers(response):
 
 def complete(provider_cls: Type[Provider], model: str) -> Tuple[Message, Usage]:
     provider = provider_cls.from_env()
-    system = "You are a helpful assistant."
+    system = "You are a helpful assistant who responds in 10 words or less."
     messages = [Message.user("Hello")]
     return provider.complete(model=model, system=system, messages=messages, tools=None)
 

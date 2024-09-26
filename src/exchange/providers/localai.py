@@ -6,7 +6,7 @@ import httpx
 from exchange.providers.openai import OpenAiProvider
 
 LOCALAI_HOST = "http://localhost:8080/"
-LOCALAI_MODEL = "mistral-nemo-instruct-2407"
+LOCALAI_MODEL = "mistral-7b-instruct-v0.3"
 
 
 class LocalAIProvider(OpenAiProvider):
