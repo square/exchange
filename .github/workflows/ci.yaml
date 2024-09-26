@@ -94,11 +94,6 @@ jobs:
         python-version:
           # Only test the latest python version.
           - "3.12"
-        localai-model:
-          # TODO: This is is the default model, as we haven't yet found a
-          # small model that passes tests when run with LocalAI. For example,
-          # "qwen2.5-0.5b-instruct" fails or hangs.
-          - "mistral-nemo-instruct-2407"
 
     steps:
       - uses: actions/checkout@v4
@@ -137,11 +132,10 @@ jobs:
       # Tests use OpenAI which does not have a mechanism to install models.
       # This blocks until the model is installed to prevent failures.
       - name: Install LocalAI model
-        run: local-ai models install $LOCALAI_MODEL || (cat localai && exit 1)
-        env:
-          LOCALAI_MODEL: ${{ matrix.localai-model }}
+        run: |
+          # Use the default model until we find a small one that passes tests.
+          LOCALAI_MODEL=$(uv run python -c "from src.exchange.providers.localai import LOCALAI_MODEL; print(LOCALAI_MODEL)")
+          local-ai models install $LOCALAI_MODEL || (cat localai && exit 1)
 
       - name: Run LocalAI tests
         run: uv run pytest tests -m integration -k localai || (cat localai && exit 1)
-        env:
-          LOCALAI_MODEL: ${{ matrix.localai-model }}
