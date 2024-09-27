@@ -128,5 +128,5 @@ def test_truncate_on_generic_conversation(conversation_exchange_instance: Exchan
         if message.text != "Summary message here":
             i += 2
         # ensure the total token count is not anything exhorbitant
-        assert conversation_exchange_instance.checkpoint_data.total_token_count < 700
+        assert conversation_exchange_instance.checkpoint_data.total_token_count < 500
         assert conversation_exchange_instance.moderator.system_prompt_token_count == 100

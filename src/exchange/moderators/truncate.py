@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 # so once we get to this token size the token count will exceed this
 # by a little bit.
 # TODO: make this configurable for each provider
-MAX_TOKENS = 100000
+MAX_TOKENS = 128000
 
 
 class ContextTruncate(Moderator):
@@ -62,15 +62,18 @@ class ContextTruncate(Moderator):
             exchange.checkpoint_data.total_token_count -= last_system_prompt_token_count
             exchange.checkpoint_data.total_token_count += self.system_prompt_token_count
 
-    def _get_messages_to_remove(self, exchange: Exchange) -> List[Message]:
+    def _get_messages_to_remove(self, exchange: Exchange, max_tokens: Optional[int] = None) -> List[Message]:
+        if not max_tokens:
+            max_tokens = self.max_tokens
+
         # this keeps all the messages/checkpoints
         throwaway_exchange = exchange.replace(
             moderator=PassiveModerator(),
         )
 
-        # get the messages that we want to remove
+        # get the messages that we want to summarize
         messages_to_remove = []
-        while throwaway_exchange.checkpoint_data.total_token_count > self.max_tokens:
+        while throwaway_exchange.checkpoint_data.total_token_count > max_tokens:
             _, messages = throwaway_exchange.pop_first_checkpoint()
             messages_to_remove.extend(messages)
 

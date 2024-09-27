@@ -10,7 +10,7 @@ from exchange.checkpoint import Checkpoint, CheckpointData
 from exchange.content import Text, ToolResult, ToolUse
 from exchange.message import Message
 from exchange.moderators import Moderator
-from exchange.moderators.truncate import ContextTruncate
+from exchange.moderators.summarizer import ContextSummarizer
 from exchange.providers import Provider, Usage
 from exchange.tool import Tool
 from exchange.token_usage_collector import _token_usage_collector
@@ -40,7 +40,7 @@ class Exchange:
     provider: Provider
     model: str
     system: str
-    moderator: Moderator = field(default=ContextTruncate())
+    moderator: Moderator = field(default=ContextSummarizer())
     tools: Tuple[Tool] = field(factory=tuple, converter=tuple)
     messages: List[Message] = field(factory=list)
     checkpoint_data: CheckpointData = field(factory=CheckpointData)
@@ -83,11 +83,8 @@ class Exchange:
         self.add(message)
         self.add_checkpoints_from_usage(usage)  # this has to come after adding the response
 
-        # TODO: also call `rewrite` here, as this will make our
-        # messages *consistently* below the token limit. this currently
-        # is not the case because we could append a large message after calling
-        # `rewrite` above.
-        # self.moderator.rewrite(self)
+        # also call `rewrite` here, as this will make our messages are consistently below the token limit.
+        self.moderator.rewrite(self)
 
         _token_usage_collector.collect(self.model, usage)
         return message

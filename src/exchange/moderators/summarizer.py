@@ -3,19 +3,38 @@ from typing import Type
 from exchange import Message
 from exchange.checkpoint import CheckpointData
 from exchange.moderators import ContextTruncate, PassiveModerator
+from exchange.moderators.truncate import MAX_TOKENS
+
+# this offset is used to prevent summarization from happening too frequently
+SUMMARIZATION_OFFSET = 30000
 
 
 class ContextSummarizer(ContextTruncate):
+    def __init__(
+        self,
+        model: str = "gpt-4o-mini",
+        max_tokens: int = MAX_TOKENS,
+        summarization_offset: int = SUMMARIZATION_OFFSET,
+    ) -> None:
+        super().__init__(model=model, max_tokens=max_tokens)
+        self.summarization_offset = summarization_offset
+
     def rewrite(self, exchange: Type["exchange.exchange.Exchange"]) -> None:  # noqa: F821
         """Summarize the context history up to the last few messages in the exchange"""
 
         self._update_system_prompt_token_count(exchange)
 
-        # TODO: use an offset for summarization
+        # note: we don't use the num_token_to_keep (defined below) here, because we only want to trigger
+        # summarization when we pass the max_token threshold. at that point, we will summarize more than
+        # we need to (using the offset), so we don't need to summarize on every ex.generate(...) call
         if exchange.checkpoint_data.total_token_count < self.max_tokens:
             return
 
-        messages_to_summarize = self._get_messages_to_remove(exchange)
+        assert self.summarization_offset < self.max_tokens
+
+        num_tokens_to_keep = self.max_tokens - self.summarization_offset
+
+        messages_to_summarize = self._get_messages_to_remove(exchange, max_tokens=num_tokens_to_keep)
         num_messages_to_remove = len(messages_to_summarize)
 
         # the llm will throw an error if the last message isn't a user message
