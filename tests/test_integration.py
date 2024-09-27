@@ -4,6 +4,7 @@ from exchange.exchange import Exchange
 from exchange.message import Message
 from exchange.moderators import ContextTruncate
 from exchange.providers import get_provider
+from exchange.providers.localai import LOCALAI_MODEL
 from exchange.providers.ollama import OLLAMA_MODEL
 from exchange.tool import Tool
 from tests.conftest import read_file
@@ -11,6 +12,7 @@ from tests.conftest import read_file
 too_long_chars = "x" * (2**20 + 1)
 
 cases = [
+    (get_provider("localai"), os.getenv("LOCALAI_MODEL", LOCALAI_MODEL), dict()),
     # Set seed and temperature for more determinism, to avoid flakes
     (get_provider("ollama"), os.getenv("OLLAMA_MODEL", OLLAMA_MODEL), dict(seed=3, temperature=0.1)),
     (get_provider("openai"), os.getenv("OPENAI_MODEL", "gpt-4o-mini"), dict()),
