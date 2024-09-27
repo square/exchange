@@ -1,64 +1,48 @@
 import os
-from unittest.mock import patch
 
 import pytest
-from exchange import Message, Text
+
+from exchange import Text, ToolUse
 from exchange.providers.azure import AzureProvider
+from .conftest import complete, tools
+
+AZURE_MODEL = os.getenv("AZURE_MODEL", "gpt-4o-mini")
 
 
-@pytest.fixture
-@patch.dict(
-    os.environ,
-    {
-        "AZURE_CHAT_COMPLETIONS_HOST_NAME": "https://test.openai.azure.com/",
-        "AZURE_CHAT_COMPLETIONS_DEPLOYMENT_NAME": "test-deployment",
-        "AZURE_CHAT_COMPLETIONS_DEPLOYMENT_API_VERSION": "2024-02-15-preview",
-        "AZURE_CHAT_COMPLETIONS_KEY": "test_api_key",
-    },
-)
-def azure_provider():
-    return AzureProvider.from_env()
+@pytest.mark.vcr()
+def test_azure_complete(default_azure_env):
+    reply_message, reply_usage = complete(AzureProvider, AZURE_MODEL)
 
-
-@patch("httpx.Client.post")
-@patch("time.sleep", return_value=None)
-@patch("logging.warning")
-@patch("logging.error")
-def test_azure_completion(mock_error, mock_warning, mock_sleep, mock_post, azure_provider):
-    mock_response = {
-        "choices": [{"message": {"role": "assistant", "content": "Hello!"}}],
-        "usage": {"prompt_tokens": 10, "completion_tokens": 25, "total_tokens": 35},
-    }
-
-    mock_post.return_value.json.return_value = mock_response
-
-    model = "gpt-4"
-    system = "You are a helpful assistant."
-    messages = [Message.user("Hello")]
-    tools = ()
-
-    reply_message, reply_usage = azure_provider.complete(model=model, system=system, messages=messages, tools=tools)
-
-    assert reply_message.content == [Text(text="Hello!")]
-    assert reply_usage.total_tokens == 35
-    mock_post.assert_called_once_with(
-        f"{azure_provider.client.base_url}/chat/completions?api-version={azure_provider.api_version}",
-        json={
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": "Hello"},
-            ],
-        },
-    )
+    assert reply_message.content == [Text(text="Hello! How can I assist you today?")]
+    assert reply_usage.total_tokens == 27
 
 
 @pytest.mark.integration
-def test_azure_integration():
-    provider = AzureProvider.from_env()
-    system = "You are a helpful assistant."
-    messages = [Message.user("Hello")]
-
-    reply = provider.complete(system=system, messages=messages, tools=None)
+def test_azure_complete_integration():
+    reply = complete(AzureProvider, AZURE_MODEL)
 
     assert reply[0].content is not None
     print("Completion content from Azure:", reply[0].content)
+
+
+@pytest.mark.vcr()
+def test_azure_tools(default_azure_env):
+    reply_message, reply_usage = tools(AzureProvider, AZURE_MODEL)
+
+    tool_use = reply_message.content[0]
+    assert isinstance(tool_use, ToolUse), f"Expected ToolUse, but was {type(tool_use).__name__}"
+    assert tool_use.id == "call_a47abadDxlGKIWjvYYvGVAHa"
+    assert tool_use.name == "read_file"
+    assert tool_use.parameters == {"filename": "test.txt"}
+    assert reply_usage.total_tokens == 125
+
+
+@pytest.mark.integration
+def test_azure_tools_integration():
+    reply = tools(AzureProvider, AZURE_MODEL)
+
+    tool_use = reply[0].content[0]
+    assert isinstance(tool_use, ToolUse), f"Expected ToolUse, but was {type(tool_use).__name__}"
+    assert tool_use.id is not None
+    assert tool_use.name == "read_file"
+    assert tool_use.parameters == {"filename": "test.txt"}
