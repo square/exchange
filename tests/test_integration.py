@@ -17,6 +17,7 @@ cases = [
     (get_provider("azure"), os.getenv("AZURE_MODEL", "gpt-4o-mini"), dict()),
     (get_provider("databricks"), "databricks-meta-llama-3-70b-instruct", dict()),
     (get_provider("bedrock"), "anthropic.claude-3-5-sonnet-20240620-v1:0", dict()),
+    (get_provider("google"), "gemini-1.5-flash", dict()),
 ]
 
 
