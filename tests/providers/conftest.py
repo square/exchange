@@ -1,20 +1,94 @@
 import os
 import re
-from typing import Type, Tuple
+from typing import Type, Tuple, Callable, Dict, Any, List
 
 import pytest
 
-from exchange import Message, ToolUse, ToolResult, Tool
-from exchange.providers import Usage, Provider
-from tests.conftest import read_file
+from exchange.providers import Provider, AzureProvider, OllamaProvider, OpenAiProvider
+from exchange.providers.ollama import OLLAMA_MODEL
+
+ProviderList = List[Tuple[Type[Provider], str]]
+
+# provider configuration for all tests except vision
+all_providers: ProviderList = [
+    (OllamaProvider, os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)),
+    (OpenAiProvider, os.getenv("OPENAI_MODEL", "gpt-4o-mini")),
+    (AzureProvider, os.getenv("AZURE_MODEL", "gpt-4o-mini")),
+]
+
+
+def mark_parametrized(providers: ProviderList = None, expected_params: Dict[Type[Provider], Tuple[Any]] = None):
+    """When expected_params is present, we assume it is a VCR test which needs
+    to fake ENV variables to avoid validation failures initializing the
+    provider. This is done via the provider_cls function"""
+
+    if providers is None:
+        providers = all_providers
+    # Create ids based on provider class names in lowercase without 'Provider' suffix
+    ids = [cls.__name__.replace("Provider", "").lower() for cls, _ in providers]
+
+    # When there are no parameters, we assume this is an integration test. So,
+    # all we do is parameterize the tests for each input provider.
+    if expected_params is None:
+
+        def decorator(test: Callable):
+            return pytest.mark.parametrize("provider_cls,model", providers, ids=ids)(test)
+
+        return decorator
+
+    # Parameters means this is a VCR test, which we use because real
+    # model output is not deterministic.
+    #
+    # When running as a VCR test, we need to parameterize the tests with values
+    # specific to a provider, and also fake the ENV variables the provider uses
+    # so that it doesn't fail on initialization.
+
+    # provider_cls is what we use to fake the ENV variables, which is a fixture
+    # and cannot be passed as a function. We have to pass it by name instead.
+    provider_cls_name = provider_cls.__name__
+
+    def decorator(test: Callable):
+        # This wraps the real test function after the provider_cls parameter is
+        # initialized (with `provider_cls`). Notably, this chooses parameters
+        # based on the provider, and passes them after provider_cls, model.
+        def add_params(provider_cls: Type[Provider], model: str) -> Tuple[Any]:
+            expected_values = expected_params.get(provider_cls)
+            if expected_values is None:
+                raise ValueError(f"No expectations found for provider class: {provider_cls}")
+            return test(provider_cls, model, *expected_values)
+
+        # This part parameterizes the test for each provider, initializing
+        # `provider_cls` with fake ENV (via `indirect`). Each test includes
+        # provider-specific parameters which are expanded in `add_params`.
+        return pytest.mark.parametrize("provider_cls,model", providers, ids=ids, indirect=[provider_cls_name])(
+            add_params
+        )
+
+    return decorator
+
+
+@pytest.fixture(scope="function")
+def provider_cls(request, monkeypatch):
+    """Returns the appropriate environment setup based on the provider class."""
+    provider_cls = request.param
+    if provider_cls == AzureProvider:
+        default_azure_env(monkeypatch)
+        return provider_cls
+    elif provider_cls == OllamaProvider:
+        return provider_cls
+    elif provider_cls == OpenAiProvider:
+        default_openai_env(monkeypatch)
+        return provider_cls
+    else:
+        raise ValueError(f"Unexpected provider: {provider_cls}")
+
 
 OPENAI_API_KEY = "test_openai_api_key"
 OPENAI_ORG_ID = "test_openai_org_key"
 OPENAI_PROJECT_ID = "test_openai_project_id"
 
 
-@pytest.fixture
-def default_openai_env(monkeypatch):
+def default_openai_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     This fixture prevents OpenAIProvider.from_env() from erring on missing
     environment variables.
@@ -33,8 +107,7 @@ AZURE_API_VERSION = "2024-05-01-preview"
 AZURE_API_KEY = "test_azure_api_key"
 
 
-@pytest.fixture
-def default_azure_env(monkeypatch):
+def default_azure_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     This fixture prevents AzureProvider.from_env() from erring on missing
     environment variables.
@@ -96,34 +169,3 @@ def scrub_response_headers(response):
     response["headers"]["openai-organization"] = OPENAI_ORG_ID
     response["headers"]["Set-Cookie"] = "test_set_cookie"
     return response
-
-
-def complete(provider_cls: Type[Provider], model: str) -> Tuple[Message, Usage]:
-    provider = provider_cls.from_env()
-    system = "You are a helpful assistant."
-    messages = [Message.user("Hello")]
-    return provider.complete(model=model, system=system, messages=messages, tools=None)
-
-
-def tools(provider_cls: Type[Provider], model: str) -> Tuple[Message, Usage]:
-    provider = provider_cls.from_env()
-    system = "You are a helpful assistant. Expect to need to read a file using read_file."
-    messages = [Message.user("What are the contents of this file? test.txt")]
-    return provider.complete(model=model, system=system, messages=messages, tools=(Tool.from_function(read_file),))
-
-
-def vision(provider_cls: Type[Provider], model: str) -> Tuple[Message, Usage]:
-    provider = provider_cls.from_env()
-    system = "You are a helpful assistant."
-    messages = [
-        Message.user("What does the first entry in the menu say?"),
-        Message(
-            role="assistant",
-            content=[ToolUse(id="xyz", name="screenshot", parameters={})],
-        ),
-        Message(
-            role="user",
-            content=[ToolResult(tool_use_id="xyz", output='"image:tests/test_image.png"')],
-        ),
-    ]
-    return provider.complete(model=model, system=system, messages=messages, tools=None)
