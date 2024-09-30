@@ -36,9 +36,8 @@ def mark_parametrized(providers: ProviderList = None, expected_params: Dict[Type
 
         return decorator
 
-    # Parameters means this is a VCR test, as we can't test for explicit (due
-    # to models not being 100pct deterministic wrt the specific tokens
-    # generated or count of them).
+    # Parameters means this is a VCR test, which we use because real
+    # model output is not deterministic.
     #
     # When running as a VCR test, we need to parameterize the tests with values
     # specific to a provider, and also fake the ENV variables the provider uses
