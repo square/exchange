@@ -24,22 +24,46 @@ def mark_parametrized(providers: ProviderList = None, expected_params: Dict[Type
 
     if providers is None:
         providers = all_providers
+    # Create ids based on provider class names in lowercase without 'Provider' suffix
     ids = [cls.__name__.replace("Provider", "").lower() for cls, _ in providers]
 
-    def decorator(func: Callable):
-        env_func_name = provider_cls.__name__
-        # Create ids based on provider class names in lowercase without 'Provider' suffix
-        if expected_params is None:
-            return pytest.mark.parametrize("provider_cls,model", providers, ids=ids)(func)
+    # When there are no parameters, we assume this is an integration test. So,
+    # all we do is parameterize the tests for each input provider.
+    if expected_params is None:
 
-        # Extract expected values based on provider_cls
-        def inner(provider_cls: Type[Provider], model: str) -> Tuple[Any]:
+        def decorator(test: Callable):
+            return pytest.mark.parametrize("provider_cls,model", providers, ids=ids)(test)
+
+        return decorator
+
+    # Parameters means this is a VCR test, as we can't test for explicit (due
+    # to models not being 100pct deterministic wrt the specific tokens
+    # generated or count of them).
+    #
+    # When running as a VCR test, we need to parameterize the tests with values
+    # specific to a provider, and also fake the ENV variables the provider uses
+    # so that it doesn't fail on initialization.
+
+    # provider_cls is what we use to fake the ENV variables, which is a fixture
+    # and cannot be passed as a function. We have to pass it by name instead.
+    provider_cls_name = provider_cls.__name__
+
+    def decorator(test: Callable):
+        # This wraps the real test function after the provider_cls parameter is
+        # initialized (with `provider_cls`). Notably, this chooses parameters
+        # based on the provider, and passes them after provider_cls, model.
+        def add_params(provider_cls: Type[Provider], model: str) -> Tuple[Any]:
             expected_values = expected_params.get(provider_cls)
             if expected_values is None:
                 raise ValueError(f"No expectations found for provider class: {provider_cls}")
-            return func(provider_cls, model, *expected_values)
+            return test(provider_cls, model, *expected_values)
 
-        return pytest.mark.parametrize("provider_cls,model", providers, ids=ids, indirect=[env_func_name])(inner)
+        # This part parameterizes the test for each provider, initializing
+        # `provider_cls` with fake ENV (via `indirect`). Each test includes
+        # provider-specific parameters which are expanded in `add_params`.
+        return pytest.mark.parametrize("provider_cls,model", providers, ids=ids, indirect=[provider_cls_name])(
+            add_params
+        )
 
     return decorator
 
