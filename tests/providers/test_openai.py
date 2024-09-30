@@ -1,29 +1,17 @@
-import os
-
 import pytest
 
 from exchange import Text, Message, ToolUse, ToolResult, Tool
-from exchange.providers import OpenAiProvider, AzureProvider
-from exchange.providers.ollama import OllamaProvider, OLLAMA_MODEL
-from .conftest import mark_parametrized
+from exchange.providers import AzureProvider, OllamaProvider, OpenAiProvider
+from .conftest import mark_parametrized, all_providers
 from ..conftest import read_file
 
-
-# provider configuration for all tests except vision
-providers = [
-    (OllamaProvider, os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)),
-    (OpenAiProvider, os.getenv("OPENAI_MODEL", "gpt-4o-mini")),
-    (AzureProvider, os.getenv("AZURE_MODEL", "gpt-4o-mini")),
-]
-
 # Currently, only OpenAI (not yet Azure) supports vision in its model.
-vision_providers = [t for t in providers if t[0] == OpenAiProvider]
+vision_providers = [t for t in all_providers if t[0] == OpenAiProvider]
 
 
 @pytest.mark.vcr
 @mark_parametrized(
-    providers,
-    {
+    expected_params={
         AzureProvider: ("Hello! How can I assist you today?", 27),
         OllamaProvider: ("Hello! I'm here to help. How can I assist you today? Let's chat. 😊", 33),
         OpenAiProvider: ("Hello! How can I assist you today?", 27),
@@ -39,7 +27,7 @@ def test_complete(provider_cls, model, expected_text: str, expected_total_tokens
 
 
 @pytest.mark.integration
-@mark_parametrized(providers)
+@mark_parametrized()
 def test_complete_integration(provider_cls, model):
     reply_message, reply_usage = complete(provider_cls, model)
 
@@ -65,8 +53,7 @@ def complete(provider_cls, model):
 
 @pytest.mark.vcr
 @mark_parametrized(
-    providers,
-    {
+    expected_params={
         AzureProvider: ("call_a47abadDxlGKIWjvYYvGVAHa", 125),
         OllamaProvider: ("call_d14omgr7", 133),
         OpenAiProvider: ("call_xXYlw4A7Ud1qtCopuK5gEJrP", 122),
@@ -84,7 +71,7 @@ def test_complete_tools(provider_cls, model, expected_tool_use_id, expected_tota
 
 
 @pytest.mark.integration
-@mark_parametrized(providers)
+@mark_parametrized()
 def test_complete_tools_integration(provider_cls, model):
     reply_message, reply_usage = complete_tools(provider_cls, model)
 
@@ -112,8 +99,8 @@ def complete_tools(provider_cls, model):
 
 @pytest.mark.vcr
 @mark_parametrized(
-    vision_providers,
-    {
+    providers=vision_providers,
+    expected_params={
         OpenAiProvider: ('The first entry in the menu says "Ask Goose."', 14241),
     },
 )

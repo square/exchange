@@ -1,22 +1,34 @@
 import os
 import re
-from typing import Type, Tuple, Callable, Dict, Any
+from typing import Type, Tuple, Callable, Dict, Any, List
 
 import pytest
 
-from exchange.providers import Provider, AzureProvider, OpenAiProvider
-from exchange.providers.ollama import OllamaProvider
+from exchange.providers import Provider, AzureProvider, OllamaProvider, OpenAiProvider
+from exchange.providers.ollama import OLLAMA_MODEL
+
+ProviderList = List[Tuple[Type[Provider], str]]
+
+# provider configuration for all tests except vision
+all_providers: ProviderList = [
+    (OllamaProvider, os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)),
+    (OpenAiProvider, os.getenv("OPENAI_MODEL", "gpt-4o-mini")),
+    (AzureProvider, os.getenv("AZURE_MODEL", "gpt-4o-mini")),
+]
 
 
-def mark_parametrized(providers: Tuple[Type[Provider], str], expected_params: Dict[Type[Provider], Tuple[Any]] = None):
+def mark_parametrized(providers: ProviderList = None, expected_params: Dict[Type[Provider], Tuple[Any]] = None):
     """When expected_params is present, we assume it is a VCR test which needs
     to fake ENV variables to avoid validation failures initializing the
     provider. This is done via the provider_cls function"""
 
+    if providers is None:
+        providers = all_providers
+    ids = [cls.__name__.replace("Provider", "").lower() for cls, _ in providers]
+
     def decorator(func: Callable):
         env_func_name = provider_cls.__name__
         # Create ids based on provider class names in lowercase without 'Provider' suffix
-        ids = [cls.__name__.replace("Provider", "").lower() for cls, _ in providers]
         if expected_params is None:
             return pytest.mark.parametrize("provider_cls,model", providers, ids=ids)(func)
 
