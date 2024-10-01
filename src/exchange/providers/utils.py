@@ -180,11 +180,13 @@ def openai_single_message_context_length_exceeded(error_dict: dict) -> None:
     if code == "context_length_exceeded" or code == "string_above_max_length":
         raise InitialMessageTooLargeError(f"Input message too long. Message: {error_dict.get('message')}")
 
+
 def get_provider_env_value(env_variable: str, provider: str, instructions: Optional[str] = None) -> str:
     try:
         return os.environ[env_variable]
     except KeyError:
         raise MissingProviderEnvVariableError(env_variable, provider, instructions)
+
 
 class InitialMessageTooLargeError(Exception):
     """Custom error raised when the first input message in an exchange is too large."""

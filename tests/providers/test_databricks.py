@@ -6,18 +6,23 @@ from exchange import Message, Text
 from exchange.providers.base import MissingProviderEnvVariableError
 from exchange.providers.databricks import DatabricksProvider
 
+
 @pytest.mark.parametrize(
     "env_var_name",
     [
         ("DATABRICKS_HOST"),
         ("DATABRICKS_TOKEN"),
-    ]
+    ],
 )
 def test_from_env_throw_error_when_missing_env_var(env_var_name):
-    with patch.dict(os.environ, {
-        "DATABRICKS_HOST": "test_host",
-        "DATABRICKS_TOKEN": "test_token",
-    }, clear=True):
+    with patch.dict(
+        os.environ,
+        {
+            "DATABRICKS_HOST": "test_host",
+            "DATABRICKS_TOKEN": "test_token",
+        },
+        clear=True,
+    ):
         os.environ.pop(env_var_name)
         with pytest.raises(MissingProviderEnvVariableError) as context:
             DatabricksProvider.from_env()
@@ -25,6 +30,7 @@ def test_from_env_throw_error_when_missing_env_var(env_var_name):
         assert context.value.env_variable == env_var_name
         assert f"Missing environment variable: {env_var_name} for provider databricks" in context.value.message
         assert "https://docs.databricks.com" in context.value.message
+
 
 @pytest.fixture
 @patch.dict(

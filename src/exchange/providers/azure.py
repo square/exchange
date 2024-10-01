@@ -1,10 +1,8 @@
-import os
 from typing import Type
 
 import httpx
 
 from exchange.providers import OpenAiProvider
-from exchange.providers.base import MissingProviderEnvVariableError
 from exchange.providers.utils import get_provider_env_value
 
 
@@ -13,7 +11,7 @@ class AzureProvider(OpenAiProvider):
 
     def __init__(self, client: httpx.Client) -> None:
         super().__init__(client)
-    
+
     @classmethod
     def from_env(cls: Type["AzureProvider"]) -> "AzureProvider":
         url = cls._get_env_variable("AZURE_CHAT_COMPLETIONS_HOST_NAME")
@@ -31,8 +29,7 @@ class AzureProvider(OpenAiProvider):
             timeout=httpx.Timeout(60 * 10),
         )
         return cls(client)
-    
+
     @classmethod
-    def _get_env_variable(cls:Type["AzureProvider"], key: str) -> str:
+    def _get_env_variable(cls: Type["AzureProvider"], key: str) -> str:
         return get_provider_env_value(key, "azure")
-    

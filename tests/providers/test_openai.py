@@ -20,6 +20,7 @@ def test_from_env_throw_error_when_missing_api_key():
         assert "Missing environment variable: OPENAI_API_KEY for provider openai" in context.value.message
         assert "https://platform.openai.com" in context.value.message
 
+
 @pytest.mark.vcr()
 def test_openai_complete(default_openai_env):
     reply_message, reply_usage = complete(OpenAiProvider, OPENAI_MODEL)

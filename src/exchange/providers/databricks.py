@@ -1,4 +1,3 @@
-import os
 from typing import Any, Dict, List, Tuple, Type
 
 import httpx
@@ -92,6 +91,6 @@ class DatabricksProvider(Provider):
         return raise_for_status(response).json()
 
     @classmethod
-    def _get_env_variable(cls:Type["DatabricksProvider"], key: str) -> str:
+    def _get_env_variable(cls: Type["DatabricksProvider"], key: str) -> str:
         instruction = "https://docs.databricks.com/en/dev-tools/auth/index.html#general-host-token-and-account-id-environment-variables-and-fields"
         return get_provider_env_value(key, "databricks", instruction)

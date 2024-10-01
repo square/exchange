@@ -11,26 +11,32 @@ from exchange.tool import Tool
 
 logger = logging.getLogger(__name__)
 
+
 @pytest.mark.parametrize(
     "env_var_name",
     [
         ("AWS_ACCESS_KEY_ID"),
         ("AWS_SECRET_ACCESS_KEY"),
         ("AWS_SESSION_TOKEN"),
-    ]
+    ],
 )
 def test_from_env_throw_error_when_missing_env_var(env_var_name):
-    with patch.dict(os.environ, {
-        "AWS_ACCESS_KEY_ID": "test_access_key_id",
-        "AWS_SECRET_ACCESS_KEY": "test_secret_access_key",
-        "AWS_SESSION_TOKEN": "test_session_token",
-    }, clear=True):
+    with patch.dict(
+        os.environ,
+        {
+            "AWS_ACCESS_KEY_ID": "test_access_key_id",
+            "AWS_SECRET_ACCESS_KEY": "test_secret_access_key",
+            "AWS_SESSION_TOKEN": "test_session_token",
+        },
+        clear=True,
+    ):
         os.environ.pop(env_var_name)
         with pytest.raises(MissingProviderEnvVariableError) as context:
             BedrockProvider.from_env()
         assert context.value.provider == "bedrock"
         assert context.value.env_variable == env_var_name
         assert context.value.message == f"Missing environment variable: {env_var_name} for provider bedrock"
+
 
 @pytest.fixture
 @patch.dict(

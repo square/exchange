@@ -325,5 +325,5 @@ class BedrockProvider(Provider):
         return tool_config
 
     @classmethod
-    def _get_env_variable(cls:Type["BedrockProvider"], key: str) -> str:
+    def _get_env_variable(cls: Type["BedrockProvider"], key: str) -> str:
         return get_provider_env_value(key, "bedrock")
