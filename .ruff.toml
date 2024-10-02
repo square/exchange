@@ -1,6 +1,0 @@
-lint.select = ["F", "E", "ANN"]
-lint.ignore = ["ANN101"]
-exclude = [
-    "docs",
-]
-line-length = 120
