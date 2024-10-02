@@ -8,6 +8,6 @@ class LoadExchangeAttributeError(Exception):
         self.available_values = available_values
         self.message = (
             f"Unknown {attribute_name}: {attribute_value}."
-            + f"Available {attribute_name}s: {', '.join(available_values)}"
+            + f" Available {attribute_name}s: {', '.join(available_values)}"
         )
         super().__init__(self.message)
