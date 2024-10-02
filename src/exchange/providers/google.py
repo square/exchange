@@ -7,7 +7,7 @@ from exchange import Message, Tool
 from exchange.content import Text, ToolResult, ToolUse
 from exchange.providers.base import Provider, Usage
 from tenacity import retry, wait_fixed, stop_after_attempt
-from exchange.providers.utils import retry_if_status
+from exchange.providers.utils import get_provider_env_value, retry_if_status
 from exchange.providers.utils import raise_for_status
 
 GOOGLE_HOST = "https://generativelanguage.googleapis.com/v1beta"
@@ -27,13 +27,8 @@ class GoogleProvider(Provider):
     @classmethod
     def from_env(cls: Type["GoogleProvider"]) -> "GoogleProvider":
         url = os.environ.get("GOOGLE_HOST", GOOGLE_HOST)
-        try:
-            key = os.environ["GOOGLE_API_KEY"]
-        except KeyError:
-            raise RuntimeError(
-                "Failed to get GOOGLE_API_KEY from the environment, see https://ai.google.dev/gemini-api/docs/api-key"
-            )
-
+        api_key_instructions = "see https://ai.google.dev/gemini-api/docs/api-key"
+        key = get_provider_env_value("GOOGLE_API_KEY", "google", api_key_instructions)
         client = httpx.Client(
             base_url=url,
             headers={
