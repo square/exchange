@@ -13,5 +13,5 @@ from exchange.moderators.summarizer import ContextSummarizer  # noqa
 def get_moderator(name: str) -> Type[Moderator]:
     moderators = load_plugins(group="exchange.moderator")
     if name not in moderators:
-        raise LoadExchangeAttributeError("moderator", name)
+        raise LoadExchangeAttributeError("moderator", name, moderators.keys())
     return moderators[name]

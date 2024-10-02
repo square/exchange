@@ -14,3 +14,5 @@ def test_get_provider_throw_error_for_unknown_provider():
         get_provider("nonexistent")
     assert error.value.attribute_name == "provider"
     assert error.value.attribute_value == "nonexistent"
+    assert "openai" in error.value.available_values
+    assert "openai" in error.value.message

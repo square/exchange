@@ -13,3 +13,5 @@ def test_get_moderator_raise_error_for_unknown_moderator():
         get_moderator("nonexistent")
     assert error.value.attribute_name == "moderator"
     assert error.value.attribute_value == "nonexistent"
+    assert "truncate" in error.value.available_values
+    assert "truncate" in error.value.message

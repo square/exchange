@@ -16,5 +16,5 @@ from exchange.utils import load_plugins
 def get_provider(name: str) -> Type[Provider]:
     providers = load_plugins(group="exchange.provider")
     if name not in providers:
-        raise LoadExchangeAttributeError("provider", name)
+        raise LoadExchangeAttributeError("provider", name, providers.keys())
     return providers[name]
