@@ -27,8 +27,8 @@ class GoogleProvider(Provider):
     @classmethod
     def from_env(cls: Type["GoogleProvider"]) -> "GoogleProvider":
         url = os.environ.get("GOOGLE_HOST", GOOGLE_HOST)
-        api_key_instructions = "see https://ai.google.dev/gemini-api/docs/api-key"
-        key = get_provider_env_value("GOOGLE_API_KEY", "google", api_key_instructions)
+        api_key_instructions_url = "see https://ai.google.dev/gemini-api/docs/api-key"
+        key = get_provider_env_value("GOOGLE_API_KEY", "google", api_key_instructions_url)
         client = httpx.Client(
             base_url=url,
             headers={

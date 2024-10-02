@@ -31,11 +31,11 @@ class Provider(ABC):
 
 
 class MissingProviderEnvVariableError(Exception):
-    def __init__(self, env_variable: str, provider: str, instructions: Optional[str] = None) -> None:
+    def __init__(self, env_variable: str, provider: str, instructions_url: Optional[str] = None) -> None:
         self.env_variable = env_variable
         self.provider = provider
-        self.instructions = instructions
-        self.message = f"Missing environment variable: {env_variable} for provider {provider}"
-        if instructions:
-            self.message += f". {instructions}"
+        self.instructions_url = instructions_url
+        self.message = f"Missing environment variable: {env_variable} for provider {provider}."
+        if instructions_url:
+            self.message += f"\n Please see {instructions_url} for instructions"
         super().__init__(self.message)
