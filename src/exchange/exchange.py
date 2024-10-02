@@ -111,6 +111,12 @@ class Exchange:
             for tool_use in response.tool_use:
                 tool_result = self.call_function(tool_use)
                 content.append(tool_result)
+                if tool_result.is_error:
+                    response = Message.user(
+                        f"We've stopped executing because of an error: {tool_result.output}",
+                    )
+                    self.add(response)
+                    return response
             self.add(Message(role="user", content=content))
 
             # We've reached the limit of tool calls - break out of the loop

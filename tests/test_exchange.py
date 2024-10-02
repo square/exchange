@@ -89,10 +89,10 @@ def test_reply_with_unsupported_tool():
 
     ex.add(Message(role="user", content=[Text(text="test")]))
 
-    ex.reply()
+    response = ex.reply()
 
-    content = ex.messages[-2].content[0]
-    assert isinstance(content, ToolResult) and content.is_error and "no tool exists" in content.output.lower()
+    assert "user" == response.role
+    assert "no tool exists" in response.text.lower()
 
 
 def test_invalid_tool_parameters():
@@ -122,10 +122,10 @@ def test_invalid_tool_parameters():
 
     ex.add(Message(role="user", content=[Text(text="test invalid parameters")]))
 
-    ex.reply()
+    response = ex.reply()
 
-    content = ex.messages[-2].content[0]
-    assert isinstance(content, ToolResult) and content.is_error and "invalid json" in content.output.lower()
+    assert "user" == response.role
+    assert "invalid json" in response.text.lower()
 
 
 def test_max_tool_use_when_limit_reached():
@@ -201,14 +201,10 @@ def test_tool_output_too_long_character_error():
 
     ex.add(Message(role="user", content=[Text(text="test long output char")]))
 
-    ex.reply()
+    response = ex.reply()
 
-    content = ex.messages[-2].content[0]
-    assert (
-        isinstance(content, ToolResult)
-        and content.is_error
-        and "output that was too long to handle" in content.output.lower()
-    )
+    assert "user" == response.role
+    assert "output that was too long to handle" in response.text.lower()
 
 
 def test_tool_output_too_long_token_error():
@@ -242,14 +238,10 @@ def test_tool_output_too_long_token_error():
 
     ex.add(Message(role="user", content=[Text(text="test long output token")]))
 
-    ex.reply()
+    response = ex.reply()
 
-    content = ex.messages[-2].content[0]
-    assert (
-        isinstance(content, ToolResult)
-        and content.is_error
-        and "output that was too long to handle" in content.output.lower()
-    )
+    assert "user" == response.role
+    assert "this tool call created an output that was too long to handle" in response.text.lower()
 
 
 @pytest.fixture(scope="function")
